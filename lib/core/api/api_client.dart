@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'package:dio/dio.dart';
 import 'package:dio_smart_retry/dio_smart_retry.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'api_endpoints.dart';
@@ -11,7 +13,7 @@ class ApiClient {
   ApiClient._internal()
       : _dio = Dio(
           BaseOptions(
-            baseUrl: ApiEndpoints.baseUrl,
+            baseUrl: _resolveBaseUrl(),
             connectTimeout: const Duration(seconds: 10),
             receiveTimeout: const Duration(seconds: 20),
             responseType: ResponseType.json,
@@ -71,6 +73,16 @@ class ApiClient {
   final Dio _dio;
   static const _tokenKey = 'auth_token';
   static const _tokenStorage = FlutterSecureStorage();
+
+  static String _resolveBaseUrl() {
+    final base = ApiEndpoints.baseUrl;
+    if (kIsWeb) return base;
+    // Android emulator can't hit localhost; map to host machine.
+    if (Platform.isAndroid && base.contains('localhost')) {
+      return base.replaceFirst('localhost', '10.0.2.2');
+    }
+    return base;
+  }
 
   Future<Response<T>> get<T>(String path, {Map<String, dynamic>? query}) async {
     return _dio.get<T>(path, queryParameters: query);
