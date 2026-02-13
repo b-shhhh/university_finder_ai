@@ -40,105 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: LoginScreen.bg,
-      body: SafeArea(
-        child: Row(
-          children: [
-            _heroPane(),
-            Expanded(child: _formPane(context)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _heroPane() {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.all(24),
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          gradient: const LinearGradient(
-            colors: [Color(0xFF0C99C3), Color(0xFF045C88)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _logo(),
-            const SizedBox(height: 32),
-            const Text(
-              "Find the right\nuniversity with less\nguesswork.",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 32,
-                fontWeight: FontWeight.w800,
-                height: 1.15,
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              "Compare universities, tuition, and courses in one focused dashboard built for students making real decisions.",
-              style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
-            ),
-            const SizedBox(height: 24),
-            _statsRow(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _logo() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: const [
-          Icon(Icons.school, color: Colors.white),
-          SizedBox(width: 10),
-          Text(
-            "UNIGUIDE\nAI University Finder",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, height: 1.2),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _statsRow() {
-    Widget stat(String value, String label) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 4),
-            Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-          ],
-        ),
-      );
-    }
-
-    return Row(
-      children: [
-        stat("1000+", "UNIVERSITIES"),
-        const SizedBox(width: 10),
-        stat("60+", "COUNTRIES"),
-        const SizedBox(width: 10),
-        stat("24/7", "ACCESS"),
-      ],
+      body: SafeArea(child: _formPane(context)),
     );
   }
 
@@ -147,7 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
       padding: const EdgeInsets.all(24),
       child: Center(
         child: Container(
-          width: 540,
+          width: 520,
           padding: const EdgeInsets.all(28),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -168,7 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                  color: LoginScreen.primary.withOpacity(0.08),
+                    color: LoginScreen.primary.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Text("ACCOUNT ACCESS", style: TextStyle(color: Color(0xFF0066B3), fontWeight: FontWeight.w700)),
