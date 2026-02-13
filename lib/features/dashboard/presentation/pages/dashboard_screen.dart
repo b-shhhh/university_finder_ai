@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:csv/csv.dart';
+import 'package:country_flags/country_flags.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../../core/api/api_endpoints.dart';
@@ -426,26 +427,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     child: Row(
                       children: [
-                        ClipOval(
-                          child: Image.network(
-                            _flagUrl(code),
-                            width: 32,
-                            height: 32,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
-                              width: 32,
-                              height: 32,
-                              color: Colors.blue.shade50,
-                              alignment: Alignment.center,
-                              child: Text(
-                                code.length > 2
-                                    ? code.substring(0, 2).toUpperCase()
-                                    : code.toUpperCase(),
-                                style: const TextStyle(color: Color(0xFF0B6FAB)),
-                              ),
-                            ),
-                          ),
-                        ),
+                        _countryFlag(code),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
@@ -658,15 +640,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  String _flagUrl(String country) {
-    final trimmed = country.trim();
-    final isCode = trimmed.length == 2;
-    if (isCode) {
-      return "https://flagcdn.com/48x36/${trimmed.toLowerCase()}.png";
-    }
-    return "https://countryflagsapi.com/png/${Uri.encodeComponent(trimmed)}";
-  }
-
   Widget _logoAvatar(String? url) {
     if (url == null || url.isEmpty) {
       return CircleAvatar(
@@ -686,6 +659,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
           fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => const Icon(Icons.school, color: Color(0xFF0B6FAB)),
         ),
+      ),
+    );
+  }
+
+  Widget _countryFlag(String codeOrName) {
+    final iso = codeOrName.trim();
+    if (iso.length == 2) {
+      return CountryFlags.flag(
+        iso.toUpperCase(),
+        width: 32,
+        height: 24,
+        borderRadius: 6,
+      );
+    }
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        iso.isNotEmpty ? iso.substring(0, iso.length >= 2 ? 2 : 1).toUpperCase() : '--',
+        style: const TextStyle(color: Color(0xFF0B6FAB), fontWeight: FontWeight.w700),
       ),
     );
   }
