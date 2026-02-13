@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:dio_smart_retry/dio_smart_retry.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'api_endpoints.dart';
 
@@ -56,15 +57,18 @@ class ApiClient {
     );
 
     // Logging (dev only)
-    _dio.interceptors.add(
-      PrettyDioLogger(
-        requestHeader: false,
-        requestBody: true,
-        responseBody: true,
-        responseHeader: false,
-        compact: true,
-      ),
-    );
+    if (kDebugMode) {
+      _dio.interceptors.add(
+        PrettyDioLogger(
+          requestHeader: false,
+          requestBody: true,
+          // Disable response body logging to avoid blowing memory on large payloads (e.g., universities list)
+          responseBody: false,
+          responseHeader: false,
+          compact: true,
+        ),
+      );
+    }
   }
 
   static final ApiClient _instance = ApiClient._internal();
