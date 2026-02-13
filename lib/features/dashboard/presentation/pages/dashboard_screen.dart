@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../data/datasources/local/university_csv_loader.dart';
+import '../../../../core/api/api_client.dart';
+import '../../../../core/api/api_endpoints.dart';
 
 import '../../../../common/navigation_bar.dart';
 import 'bottom screen/saved_page.dart';
@@ -18,8 +19,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _currentIndex = 0;
 
   List<String> countries = [];
-  List<Map<String, String>> allUniversities = [];
-  List<Map<String, String>> universities = [];
+  List allUniversities = [];
+  List universities = [];
   List<String> courses = [];
   String? selectedCourse;
   List stats = [];
@@ -41,29 +42,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> loadData() async {
     try {
-      await UniversityCsvLoader.instance.load();
-      allUniversities = UniversityCsvLoader.instance.universities;
-      countries = UniversityCsvLoader.instance.countries;
-      courses = UniversityCsvLoader.instance.courses;
-      universities = List.from(allUniversities);
+      final c = await ApiClient.I.get(ApiEndpoints.universities + "/countries");
+      final u = await ApiClient.I.get(ApiEndpoints.universities);
+      final coursesRes = await ApiClient.I.get(ApiEndpoints.universityCourses);
+      final recRes = await ApiClient.I.get(ApiEndpoints.recommendations);
 
-      // lightweight recommendations and deadlines placeholders
-      recommendations = allUniversities.take(20).map((u) {
-        final course = (u['courses'] ?? '').split(',').firstWhere((e) => e.isNotEmpty, orElse: () => 'General');
-        return {
-          'name': u['name'] ?? '',
-          'program': course,
-          'country': u['country'] ?? '',
-          'score': '90%',
-          'tuition': '\$18,000/year',
-        };
-      }).toList();
-      deadlines = [
-        {'title': 'Application Document Review', 'date': 'Mar 15, 2026'},
-        {'title': 'Scholarship Submission', 'date': 'Mar 30, 2026'},
-      ];
-      loading = false;
-      setState(() {});
+      // saved universities (if authenticated)
+      try {
+        final savedRes = await ApiClient.I.get(ApiEndpoints.savedUniversities);
+        final data = savedRes.data is Map ? (savedRes.data['data'] ?? []) : (savedRes.data ?? []);
+        savedIds = Set<String>.from(data.map((e) => e.toString()));
+      } catch (_) {}
+
+      setState(() {
+        final countriesPayload = c.data is Map ? c.data['data'] : c.data;
+        countries = List<String>.from(countriesPayload as List);
+        allUniversities = u.data is Map ? (u.data['data'] ?? []) : (u.data ?? []);
+        universities = List.from(allUniversities);
+        courses = List<String>.from(
+            (coursesRes.data is Map ? coursesRes.data['data'] : coursesRes.data) as List);
+        final recPayload = recRes.data is Map ? (recRes.data['data'] ?? recRes.data) : {};
+        stats = (recPayload['stats'] ?? []) as List;
+        recommendations = (recPayload['recommendations'] ?? []) as List;
+        deadlines = (recPayload['deadlines'] ?? []) as List;
+        loading = false;
+      });
     } catch (e) {
       debugPrint(e.toString());
       setState(() => loading = false);
@@ -71,8 +74,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> loadUniversities(String code) async {
+    final res = await ApiClient.I.get("${ApiEndpoints.universities}/country/$code");
     setState(() {
-      universities = UniversityCsvLoader.instance.universitiesByCountry(code);
+      universities = res.data is Map ? (res.data['data'] ?? []) : (res.data ?? []);
     });
   }
 
@@ -91,13 +95,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> toggleSave(String id) async {
     final isSaved = savedIds.contains(id);
-    setState(() {
+    try {
       if (isSaved) {
+        await ApiClient.I.delete("${ApiEndpoints.savedUniversities}/$id");
         savedIds.remove(id);
       } else {
+        await ApiClient.I.post(ApiEndpoints.savedUniversities, data: {'universityId': id});
         savedIds.add(id);
       }
-    });
+      setState(() {});
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Save failed: $e')),
+      );
+    }
   }
 
   void searchUniversities(String query) {
@@ -278,7 +289,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: universities.length > 100 ? 100 : universities.length,
+              itemCount: universities.length > 50 ? 50 : universities.length,
               itemBuilder: (_, index) {
                 final u = universities[index];
                 final name = u['name'] ?? 'University';
