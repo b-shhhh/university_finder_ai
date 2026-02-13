@@ -69,6 +69,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       });
     } catch (e) {
       debugPrint(e.toString());
+      setState(() => loading = false);
     }
   }
 
