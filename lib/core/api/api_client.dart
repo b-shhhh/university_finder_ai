@@ -26,6 +26,12 @@ class ApiClient {
         }
         options.headers['Accept'] = 'application/json';
         return handler.next(options);
+      }, onError: (error, handler) async {
+        // Auto-clear token on 401 to prevent stale sessions
+        if (error.response?.statusCode == 401) {
+          await clearToken();
+        }
+        return handler.next(error);
       }),
     );
 

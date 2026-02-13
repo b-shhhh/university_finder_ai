@@ -17,6 +17,16 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   bool _submitting = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Prefill token from query parameter if present (deep link or web)
+    final token = Uri.base.queryParameters['token'];
+    if (token != null && token.isNotEmpty) {
+      _tokenCtrl.text = token;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Reset password')),

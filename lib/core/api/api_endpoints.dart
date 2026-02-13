@@ -1,6 +1,9 @@
 class ApiEndpoints {
-  // Base API URL (default backend runs on port 5050)
-  static const baseUrl = 'http://localhost:5050/api';
+  // Base API URL (can be overridden with --dart-define=API_BASE_URL=https://api.example.com)
+  static const baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://localhost:5050/api',
+  );
 
   // Auth
   static const login = '/auth/login';
