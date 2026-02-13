@@ -210,7 +210,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     ListTile(
                       leading: const Icon(Icons.lock_reset),
                       title: const Text('Change password'),
-                      onTap: () => Navigator.pushNamed(context, '/change-password'),
+                      onTap: _showChangePasswordDialog,
                     ),
                     ListTile(
                       leading: const Icon(Icons.logout, color: Colors.orange),
@@ -286,5 +286,88 @@ class _ProfilePageState extends State<ProfilePage> {
         SnackBar(content: Text('Delete failed: $e')),
       );
     }
+  }
+
+  Future<void> _showChangePasswordDialog() async {
+    final formKey = GlobalKey<FormState>();
+    final oldCtrl = TextEditingController();
+    final newCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+    bool loading = false;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: const Text('Change password'),
+            content: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: oldCtrl,
+                    obscureText: true,
+                    decoration: const InputDecoration(labelText: 'Current password'),
+                    validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                  ),
+                  TextFormField(
+                    controller: newCtrl,
+                    obscureText: true,
+                    decoration: const InputDecoration(labelText: 'New password'),
+                    validator: (v) => v != null && v.length >= 6 ? null : 'Min 6 chars',
+                  ),
+                  TextFormField(
+                    controller: confirmCtrl,
+                    obscureText: true,
+                    decoration: const InputDecoration(labelText: 'Confirm new password'),
+                    validator: (v) => v == newCtrl.text ? null : 'Passwords do not match',
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: loading
+                    ? null
+                    : () async {
+                        if (!formKey.currentState!.validate()) return;
+                        setState(() => loading = true);
+                        try {
+                          await ApiClient.I.put(ApiEndpoints.changePassword, data: {
+                            'oldPassword': oldCtrl.text.trim(),
+                            'newPassword': newCtrl.text.trim(),
+                          });
+                          if (mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(this.context).showSnackBar(
+                              const SnackBar(content: Text('Password updated')),
+                            );
+                          }
+                        } catch (e) {
+                          setState(() => loading = false);
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            SnackBar(content: Text('Failed: $e')),
+                          );
+                        }
+                      },
+                child: loading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('Update'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
