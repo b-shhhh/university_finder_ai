@@ -21,9 +21,9 @@ Future<Map<String, dynamic>> login(String email, String password) async {
 }
 
 class LoginScreen extends StatefulWidget {
-  LoginScreen({super.key});
-  final Color primary = const Color(0xFF0066B3);
-  final Color bg = const Color(0xFFF7FBFF);
+  const LoginScreen({super.key});
+  static const Color primary = Color(0xFF0066B3);
+  static const Color bg = Color(0xFFF7FBFF);
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -39,7 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: widget.bg,
+      backgroundColor: LoginScreen.bg,
       body: SafeArea(
         child: Row(
           children: [
@@ -168,7 +168,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: widget.primary.withOpacity(0.08),
+                  color: LoginScreen.primary.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Text("ACCOUNT ACCESS", style: TextStyle(color: Color(0xFF0066B3), fontWeight: FontWeight.w700)),
@@ -202,7 +202,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: ElevatedButton(
                     onPressed: loading ? null : _submit,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: widget.primary,
+                      backgroundColor: LoginScreen.primary,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
@@ -291,7 +291,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: widget.primary, width: 1.6),
+        borderSide: const BorderSide(color: LoginScreen.primary, width: 1.6),
       ),
     );
   }
