@@ -5,6 +5,8 @@ import '../features/auth/presentation/pages/register_screen.dart';
 import '../features/dashboard/presentation/pages/dashboard_screen.dart';
 import '../features/onboarding/presentation/page/onboarding_screen.dart';
 import '../features/splash/presentation/page/splash_screen.dart';
+import '../features/auth/presentation/pages/forgot_password.dart';
+import '../features/auth/presentation/pages/reset_password.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -24,6 +26,8 @@ class MyApp extends StatelessWidget {
         '/login': (_) => LoginScreen(),
         '/register': (_) => RegisterScreen(),
         '/dashboard': (_) => DashboardScreen(),
+        '/forgot-password': (_) => const ForgotPasswordScreen(),
+        '/reset-password': (_) => const ResetPasswordScreen(),
       },
     );
   }

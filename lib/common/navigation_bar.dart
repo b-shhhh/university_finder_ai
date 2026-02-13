@@ -16,7 +16,7 @@ class MyNavigationBar extends StatelessWidget {
       unselectedItemColor: Colors.grey,
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.note_alt), label: 'Application'),
+        BottomNavigationBarItem(icon: Icon(Icons.bookmark), label: 'Saved'),
         BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
       ],
     );

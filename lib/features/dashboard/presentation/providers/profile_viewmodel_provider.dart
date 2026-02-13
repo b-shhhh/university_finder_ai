@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/legacy.dart';
 
 
 final uploadProfileImageUseCaseProvider = Provider((ref) {
-  return UploadProfileImage(uploadUrl: 'http://localhost:3000/upload');
+  return UploadProfileImage(uploadUrl: 'http://localhost:5050/api/auth/update-profile');
 });
 
 final profileViewModelProvider = StateNotifierProvider<ProfileViewModel, ProfileState>((ref) {

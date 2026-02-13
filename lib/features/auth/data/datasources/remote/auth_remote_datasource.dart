@@ -1,43 +1,48 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 import '../../models/auth_api_model.dart';
+import '../../models/user_api_model.dart';
+import '../../../../../core/api/api_client.dart';
+import '../../../../../core/api/api_endpoints.dart';
 
 class AuthRemoteDataSource {
-  final String baseUrl;
-
-  AuthRemoteDataSource({required this.baseUrl});
+  final ApiClient _client = ApiClient.I;
 
   /// Register user via API
-  Future<AuthApiModel> registerUser(AuthApiModel user) async {
-    final url = Uri.parse('$baseUrl/register');
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(user.toJson()),
-    );
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return AuthApiModel.fromJson(jsonDecode(response.body));
-    } else {
-      throw Exception(
-          'Failed to register user: ${response.statusCode} ${response.body}');
+  Future<AuthApiModel> registerUser(Map<String, dynamic> payload) async {
+    try {
+      final Response res = await _client.post(ApiEndpoints.register, data: payload);
+      return AuthApiModel.fromJson(res.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw Exception(_extractMessage(e));
     }
   }
 
   /// Login user via API
   Future<AuthApiModel> loginUser(String email, String password) async {
-    final url = Uri.parse('$baseUrl/login');
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
-    );
-
-    if (response.statusCode == 200) {
-      return AuthApiModel.fromJson(jsonDecode(response.body));
-    } else {
-      throw Exception(
-          'Failed to login: ${response.statusCode} ${response.body}');
+    try {
+      final Response res = await _client.post(ApiEndpoints.login, data: {
+        'email': email,
+        'password': password,
+      });
+      return AuthApiModel.fromJson(res.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw Exception(_extractMessage(e));
     }
+  }
+
+  /// Fetch authenticated user profile
+  Future<UserApiModel> whoAmI() async {
+    try {
+      final Response res = await _client.get(ApiEndpoints.whoAmI);
+      return UserApiModel.fromJson(res.data['data'] as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw Exception(_extractMessage(e));
+    }
+  }
+
+  String _extractMessage(DioException e) {
+    final data = e.response?.data;
+    if (data is Map && data['message'] is String) return data['message'] as String;
+    return e.message ?? 'Network error';
   }
 }

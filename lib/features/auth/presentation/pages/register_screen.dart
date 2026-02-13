@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import '../../../../core/api/api_client.dart';
+import '../../../../core/api/api_endpoints.dart';
 
 // API call
 Future<bool> register({
@@ -8,32 +8,28 @@ Future<bool> register({
   required String email,
   required String password,
   required String phone,
-  }) async {
-  final url = Uri.parse("http://10.0.2.2:3000/api/auth/register");
-
+  String countryCode = '+1',
+}) async {
   try {
-    final response = await http.post(
-      url,
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
+    final res = await ApiClient.I.post(
+      ApiEndpoints.register,
+      data: {
         "fullName": fullName,
         "email": email,
         "password": password,
+        "confirmPassword": password,
         "phone": phone,
-        "education": "Not specified",
-      }),
+        "countryCode": countryCode,
+      },
     );
 
-    print("STATUS: ${response.statusCode}");
-    print("BODY: ${response.body}");
-
-    if (response.statusCode == 201 || response.statusCode == 200) {
-      return true;
-    } else {
-      return false;
+    final token = (res.data as Map<String, dynamic>)['token']?.toString();
+    if (token != null) {
+      await ApiClient.I.saveToken(token);
     }
+    return (res.statusCode ?? 400) >= 200 && (res.statusCode ?? 0) < 300;
   } catch (e) {
-    print("Flutter error: $e");
+    debugPrint("Register error: $e");
     return false;
   }
 }

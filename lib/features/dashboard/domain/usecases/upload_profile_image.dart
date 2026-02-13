@@ -1,6 +1,5 @@
 import 'dart:io';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:dio/dio.dart';
 
 class UploadProfileImage {
   final String uploadUrl;
@@ -8,16 +7,16 @@ class UploadProfileImage {
   UploadProfileImage({required this.uploadUrl});
 
   Future<String> call(File image) async {
-    final request = http.MultipartRequest('POST', Uri.parse(uploadUrl));
-    request.files.add(await http.MultipartFile.fromPath('profilePicture', image.path));
-    final response = await request.send();
-
-    if (response.statusCode == 200) {
-      final body = await response.stream.bytesToString();
-      final jsonData = jsonDecode(body);
-      return jsonData['imageUrl']; // return uploaded URL
-    } else {
-      throw Exception('Failed to upload image');
+    final dio = Dio();
+    final form = FormData.fromMap({
+      'profilePic': await MultipartFile.fromFile(image.path, filename: image.uri.pathSegments.last),
+    });
+    final res = await dio.put(uploadUrl, data: form);
+    if ((res.statusCode ?? 500) < 300) {
+      final data = res.data as Map<String, dynamic>;
+      final updated = data['data'] as Map<String, dynamic>?;
+      return (updated?['profilePic'] ?? '').toString();
     }
+    throw Exception('Failed to upload image');
   }
 }

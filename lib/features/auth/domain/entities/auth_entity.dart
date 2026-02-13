@@ -1,15 +1,27 @@
 class AuthEntity {
+  final String id;
   final String fullName;
   final String email;
-  final String password;
   final String phone;
-  final String education;
+  final String? country;
+  final String? bio;
+  final String role;
+  final String? profilePic;
+  final List<String> savedUniversities;
+  final String? token;
+  final String? password; // only used on submit
 
   AuthEntity({
+    required this.id,
     required this.fullName,
     required this.email,
-    required this.password,
     required this.phone,
-    required this.education,
+    this.country,
+    this.bio,
+    this.role = 'user',
+    this.profilePic,
+    this.savedUniversities = const [],
+    this.token,
+    this.password,
   });
 }

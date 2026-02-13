@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import '../../../../core/api/api_client.dart';
+import '../../../../core/api/api_endpoints.dart';
 
 // ================= LOGIN API =================
 Future<Map<String, dynamic>> login(String email, String password) async {
-  final url = Uri.parse("http://10.0.2.2:3000/api/auth/login"); // Android emulator fix
-
   try {
-    final response = await http.post(
-      url,
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"email": email, "password": password}),
+    final res = await ApiClient.I.post(
+      ApiEndpoints.login,
+      data: {"email": email, "password": password},
     );
-
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200 && data['success'] == true) {
-      return {"success": true, "token": data['token'], "user": data['user']};
+    final data = res.data as Map<String, dynamic>;
+    if ((res.statusCode ?? 400) == 200 && data['success'] == true) {
+      final token = data['token']?.toString();
+      if (token != null) {
+        await ApiClient.I.saveToken(token);
+      }
+      return {"success": true, "token": token, "user": data['data']?['user']};
     } else {
-      return {"success": false, "error": data['error'] ?? "Login failed"};
+      return {"success": false, "error": data['message'] ?? "Login failed"};
     }
   } catch (e) {
     return {"success": false, "error": "Server error"};

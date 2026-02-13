@@ -1,37 +1,36 @@
-import 'package:hive/hive.dart';
-import '../models/auth_hive_model.dart';
-import 'auth_repository.dart';
 import '../../domain/entities/auth_entity.dart';
+import '../../domain/entities/auth_response.dart';
+import '../../domain/repositories/auth_repository.dart';
+import '../datasources/remote/auth_remote_datasource.dart';
+import '../models/auth_api_model.dart';
+import '../../../../core/api/api_client.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
-  final String hiveBoxName = 'usersBox';
+  AuthRepositoryImpl({AuthRemoteDataSource? remote})
+      : _remote = remote ?? AuthRemoteDataSource();
+
+  final AuthRemoteDataSource _remote;
+  final ApiClient _client = ApiClient.I;
 
   @override
-  Future<void> registerUser(AuthEntity user) async {
-    final box = await Hive.openBox<AuthHiveModel>(hiveBoxName);
-    final hiveUser = AuthHiveModel(
-      fullName: user.fullName,
-      email: user.email,
-      password: user.password,
-      phone: user.phone,
-      education: user.education,
-    );
-    await box.put(user.email, hiveUser);
+  Future<AuthResponse> registerUser(AuthEntity user) async {
+    final payload = {
+      'fullName': user.fullName,
+      'email': user.email,
+      'countryCode': user.country ?? '',
+      'phone': user.phone,
+      'password': user.password ?? '',
+      'confirmPassword': user.password ?? '',
+    };
+    final AuthApiModel res = await _remote.registerUser(payload);
+    await _client.saveToken(res.token);
+    return AuthResponse.success(res.toEntity(), message: "Registered successfully");
   }
 
   @override
-  Future<AuthEntity?> loginUser(String email, String password) async {
-    final box = await Hive.openBox<AuthHiveModel>(hiveBoxName);
-    final hiveUser = box.get(email);
-    if (hiveUser != null && hiveUser.password == password) {
-      return AuthEntity(
-        fullName: hiveUser.fullName,
-        email: hiveUser.email,
-        password: hiveUser.password,
-        phone: hiveUser.phone,
-        education: hiveUser.education,
-      );
-    }
-    return null;
+  Future<AuthResponse> loginUser(String email, String password) async {
+    final AuthApiModel res = await _remote.loginUser(email, password);
+    await _client.saveToken(res.token);
+    return AuthResponse.success(res.toEntity(), message: "Logged in");
   }
 }

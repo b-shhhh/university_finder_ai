@@ -9,21 +9,24 @@ class ProfileRepositoryImpl implements ProfileRepository {
   ProfileRepositoryImpl(this.remote);
 
   @override
-  Future<String> uploadProfileImage(File file) {
-    return remote.uploadProfileImage(file);
+  Future<String> uploadProfileImage(File file) async {
+    final res = await remote.uploadProfileImage(file);
+    final data = res['data'] as Map<String, dynamic>? ?? res;
+    return data['profilePic']?.toString() ?? '';
   }
 
   /// ✅ IMPLEMENTED (ERROR GONE)
   @override
   Future<ProfileEntity> getProfile() async {
     final data = await remote.fetchProfile();
+    final user = data['data'] as Map<String, dynamic>? ?? data;
 
     return ProfileEntity(
-      id: data["id"],
-      imageUrl: data["imageUrl"],
-      fullName: data["fullName"],
-      email: data["email"],
-      className: data["className"],
+      id: user["id"]?.toString(),
+      imageUrl: user["profilePic"]?.toString(),
+      fullName: user["fullName"]?.toString(),
+      email: user["email"]?.toString(),
+      className: user["className"]?.toString(),
     );
   }
 }

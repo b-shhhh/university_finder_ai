@@ -9,7 +9,8 @@ ThemeData getApplicationTheme() {
       brightness: Brightness.light,
     ),
 
-    fontFamily: "PlayfairDisplay Regular",
+    // Use bundled Inter font (see pubspec.yaml)
+    fontFamily: "Inter",
 
     scaffoldBackgroundColor: Colors.grey.shade100,
 
@@ -20,8 +21,8 @@ ThemeData getApplicationTheme() {
       foregroundColor: Colors.white,
       titleTextStyle: TextStyle(
         fontSize: 20,
-        fontWeight: FontWeight.w600,
-        fontFamily: "PlayfairDisplay Regular",
+        fontWeight: FontWeight.w700,
+        fontFamily: "Inter",
         color: Colors.white,
       ),
       iconTheme: IconThemeData(
@@ -72,8 +73,8 @@ ThemeData getApplicationTheme() {
         textStyle: const TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w500,
-          fontFamily: "PlayfairDisplay Regular",
-        ),
+        fontFamily: "Inter",
+      ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(6),
         ),

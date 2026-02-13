@@ -5,35 +5,40 @@ part 'auth_api_model.g.dart';
 
 @JsonSerializable()
 class AuthApiModel {
-  final String fullName;
-  final String email;
-  final String password;
-  final String phone;
-  final String education;
+  final bool success;
+  final String token;
+  @JsonKey(name: 'data')
+  final Map<String, dynamic>? data;
 
   AuthApiModel({
-    required this.fullName,
-    required this.email,
-    required this.password,
-    required this.phone,
-    required this.education,
+    required this.success,
+    required this.token,
+    required this.data,
   });
 
-  // From JSON
-  factory AuthApiModel.fromJson(Map<String, dynamic> json) =>
-      _$AuthApiModelFromJson(json);
+  /// From JSON
+  factory AuthApiModel.fromJson(Map<String, dynamic> json) => _$AuthApiModelFromJson(json);
 
-  // To JSON
+  /// To JSON (used when registering)
   Map<String, dynamic> toJson() => _$AuthApiModelToJson(this);
 
-  // Convert to domain entity
+  /// Extract user entity from nested data
   AuthEntity toEntity() {
+    final userJson = (data ?? const {})['user'] as Map<String, dynamic>? ?? {};
     return AuthEntity(
-      fullName: fullName,
-      email: email,
-      password: password,
-      phone: phone,
-      education: education,
+      id: userJson['id']?.toString() ?? '',
+      fullName: userJson['fullName']?.toString() ?? '',
+      email: userJson['email']?.toString() ?? '',
+      phone: userJson['phone']?.toString() ?? '',
+      country: userJson['country']?.toString(),
+      bio: userJson['bio']?.toString(),
+      role: userJson['role']?.toString() ?? 'user',
+      profilePic: userJson['profilePic']?.toString(),
+      token: token,
+      savedUniversities: (userJson['savedUniversities'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
     );
   }
 }

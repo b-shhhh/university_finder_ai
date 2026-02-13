@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../domain/entities/auth_entity.dart';
+import '../../domain/entities/auth_response.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 
 class AuthViewModel extends ChangeNotifier {
@@ -15,35 +16,39 @@ class AuthViewModel extends ChangeNotifier {
 
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
+  AuthEntity? _user;
+  AuthEntity? get user => _user;
 
-  Future<void> registerUser(AuthEntity user) async {
+  Future<AuthResponse> registerUser(AuthEntity user) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      await _repository.registerUser(user);
+      final res = await _repository.registerUser(user);
+      _user = res.user;
+      return res;
     } catch (e) {
       _errorMessage = 'Registration failed: $e';
+      return AuthResponse.failure(_errorMessage!);
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  Future<bool> loginUser(String email, String password) async {
+  Future<AuthResponse> loginUser(String email, String password) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final user = await _repository.loginUser(email, password);
-      if (user != null) return true;
-      _errorMessage = 'Invalid email or password';
-      return false;
+      final res = await _repository.loginUser(email, password);
+      _user = res.user;
+      return res;
     } catch (e) {
       _errorMessage = 'Login failed: $e';
-      return false;
+      return AuthResponse.failure(_errorMessage!);
     } finally {
       _isLoading = false;
       notifyListeners();
