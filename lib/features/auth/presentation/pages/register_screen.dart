@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../../core/api/api_endpoints.dart';
 
-// API call
 Future<bool> register({
   required String fullName,
   required String email,
@@ -22,11 +21,8 @@ Future<bool> register({
         "countryCode": countryCode,
       },
     );
-
     final token = (res.data as Map<String, dynamic>)['token']?.toString();
-    if (token != null) {
-      await ApiClient.I.saveToken(token);
-    }
+    if (token != null) await ApiClient.I.saveToken(token);
     return (res.statusCode ?? 400) >= 200 && (res.statusCode ?? 0) < 300;
   } catch (e) {
     debugPrint("Register error: $e");
@@ -37,6 +33,9 @@ Future<bool> register({
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
+  final Color primary = const Color(0xFF0066B3);
+  final Color bg = const Color(0xFFF7FBFF);
+
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
@@ -45,258 +44,323 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   bool showPassword = false;
   bool showConfirmPassword = false;
+  bool loading = false;
 
-  // Controllers
-  final TextEditingController fullNameController = TextEditingController();
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmPasswordController = TextEditingController();
-  final TextEditingController phoneController = TextEditingController();
-
-  // Colors
-  final Color primaryBrand = const Color(0xFF4E4AF2);
-  final Color secondaryBrand = const Color(0xFF7B78FF);
-  final Color background = const Color(0xFFF8F9FE);
-  final Color surface = Colors.white;
+  final fullNameController = TextEditingController();
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  final confirmPasswordController = TextEditingController();
+  final phoneController = TextEditingController();
+  final countryCodeController = TextEditingController(text: "+1");
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: background,
-      body: SingleChildScrollView(
-        child: Column(
+      backgroundColor: widget.bg,
+      body: SafeArea(
+        child: Row(
           children: [
-            _buildHeader(),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-              child: Transform.translate(
-                offset: const Offset(0, -30),
-                child: _buildFormCard(),
-              ),
-            ),
+            _heroPane(),
+            Expanded(child: _formPane(context)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      height: 260,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [primaryBrand, secondaryBrand],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(40),
-          bottomRight: Radius.circular(40),
-        ),
-      ),
-      child: SafeArea(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TweenAnimationBuilder(
-              duration: const Duration(milliseconds: 800),
-              tween: Tween<double>(begin: 0, end: 1),
-              builder: (context, double value, child) {
-                return Opacity(
-                  opacity: value,
-                  child: Transform.scale(scale: value, child: child),
-                );
-              },
-              child: const Icon(Icons.school_rounded, size: 70, color: Colors.white),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'UniGuide',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-                letterSpacing: -0.5,
-              ),
-            ),
-            const Text(
-              'Your academic journey starts here',
-              style: TextStyle(color: Colors.white70, fontSize: 15),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFormCard() {
-    return Container(
-      padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(
-        color: surface,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 25,
-            offset: const Offset(0, 10),
+  Widget _heroPane() {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF0C99C3), Color(0xFF045C88)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
-        ],
-      ),
-      child: Form(
-        key: _formKey,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildTextField('Full Name', Icons.person_outline, controller: fullNameController),
-            const SizedBox(height: 16),
-            _buildTextField('Email Address', Icons.alternate_email_rounded,
-                keyboardType: TextInputType.emailAddress, controller: emailController),
-            const SizedBox(height: 24),
-            _buildPasswordField('Password', showPassword, () => setState(() => showPassword = !showPassword),
-                controller: passwordController),
-            const SizedBox(height: 16),
-            _buildPasswordField(
-                'Confirm Password', showConfirmPassword, () => setState(() => showConfirmPassword = !showConfirmPassword),
-                controller: confirmPasswordController),
-            const SizedBox(height: 16),
-            _buildTextField('Phone', Icons.phone_iphone_rounded, keyboardType: TextInputType.phone, controller: phoneController),
-            const SizedBox(height: 24),
-            _buildSubmitButton(),
-            const SizedBox(height: 8),
-            Center(
-              child: TextButton(
-                onPressed: () => Navigator.pushNamed(context, '/login'),
-                child: RichText(
-                  text: TextSpan(
-                    text: "Already have an account? ",
-                    style: const TextStyle(color: Colors.black54),
-                    children: [
-                      TextSpan(
-                        text: 'Login',
-                        style: TextStyle(color: primaryBrand, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                ),
+            _logo(),
+            const SizedBox(height: 32),
+            const Text(
+              "Find the right\nuniversity with less\nguesswork.",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 32,
+                fontWeight: FontWeight.w800,
+                height: 1.15,
               ),
             ),
+            const SizedBox(height: 12),
+            const Text(
+              "Compare universities, tuition, and courses in one focused dashboard built for students making real decisions.",
+              style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+            ),
+            const SizedBox(height: 24),
+            _statsRow(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTextField(String hint, IconData icon,
-      {TextInputType keyboardType = TextInputType.text, TextEditingController? controller}) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      style: const TextStyle(fontSize: 15, color: Colors.black),
-      decoration: _inputDecoration(hint, icon),
-      validator: (value) {
-        if (value == null || value.isEmpty) return 'Please enter $hint';
-        if (hint == 'Email Address' && !RegExp(r'\S+@\S+\.\S+').hasMatch(value)) {
-          return 'Please enter a valid email';
-        }
-        if (hint == 'Phone' && value.length < 7) return 'Please enter a valid phone';
-        return null;
-      },
-    );
-  }
-
-  Widget _buildPasswordField(String hint, bool visible, VoidCallback toggle, {TextEditingController? controller}) {
-    return TextFormField(
-      controller: controller,
-      obscureText: !visible,
-      style: const TextStyle(fontSize: 15, color: Colors.black),
-      decoration: _inputDecoration(hint, Icons.lock_outline_rounded).copyWith(
-        suffixIcon: IconButton(
-          icon: Icon(visible ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20, color: Colors.black),
-          onPressed: toggle,
-        ),
-      ),
-      validator: (value) => value == null || value.isEmpty ? 'Please enter $hint' : null,
-    );
-  }
-
-  InputDecoration _inputDecoration(String hint, IconData icon) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(color: Colors.black54, fontSize: 15),
-      prefixIcon: Icon(icon, size: 20, color: Colors.black54),
-      filled: true,
-      fillColor: background,
-      contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide.none,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: Colors.grey.withOpacity(0.1), width: 1),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: primaryBrand.withOpacity(0.5), width: 1.5),
-      ),
-    );
-  }
-
-  Widget _buildSubmitButton() {
+  Widget _logo() {
     return Container(
-      width: double.infinity,
-      height: 58,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: primaryBrand.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+        color: Colors.white.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          Icon(Icons.school, color: Colors.white),
+          SizedBox(width: 10),
+          Text(
+            "UNIGUIDE\nAI University Finder",
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, height: 1.2),
           ),
         ],
       ),
-      child: ElevatedButton(
-        onPressed: () async {
-          if (_formKey.currentState!.validate()) {
-            // ✅ Confirm password match
-            if (passwordController.text.trim() != confirmPasswordController.text.trim()) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Passwords do not match")),
-              );
-              return;
-            }
+    );
+  }
 
-            bool success = await register(
-              fullName: fullNameController.text.trim(),
-              email: emailController.text.trim(),
-              password: passwordController.text.trim(),
-              phone: phoneController.text.trim(),
-            );
-
-            if (success) {
-              Navigator.pushReplacementNamed(context, '/dashboard');
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Signup failed. Check console for details.")),
-              );
-            }
-          }
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primaryBrand,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          elevation: 0,
+  Widget _statsRow() {
+    Widget stat(String value, String label) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: const Text(
-          'Register',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 4),
+            Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          ],
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        stat("1000+", "UNIVERSITIES"),
+        const SizedBox(width: 10),
+        stat("60+", "COUNTRIES"),
+        const SizedBox(width: 10),
+        stat("24/7", "ACCESS"),
+      ],
+    );
+  }
+
+  Widget _formPane(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Center(
+        child: Container(
+          width: 540,
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 28,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: widget.primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text("NEW ACCOUNT", style: TextStyle(color: Color(0xFF0066B3), fontWeight: FontWeight.w700)),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  "Create account",
+                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  "Sign up to build your university shortlist.",
+                  style: TextStyle(color: Color(0xFF6B7280)),
+                ),
+                const SizedBox(height: 20),
+                _input("Full name", fullNameController),
+                const SizedBox(height: 14),
+                _input("Email", emailController, keyboard: TextInputType.emailAddress, validator: _emailValidator),
+                const SizedBox(height: 14),
+                _passwordInput("Password", passwordController, isConfirm: false),
+                const SizedBox(height: 14),
+                _passwordInput("Confirm password", confirmPasswordController, isConfirm: true),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 1,
+                      child: _input("Country code", countryCodeController, keyboard: TextInputType.phone),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 3,
+                      child: _input("Phone number", phoneController, keyboard: TextInputType.phone),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: loading ? null : _submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: widget.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: loading
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text("REGISTER", style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Center(
+                  child: TextButton(
+                    onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
+                    child: const Text.rich(
+                      TextSpan(
+                        text: "Already have an account? ",
+                        style: TextStyle(color: Color(0xFF6B7280)),
+                        children: [
+                          TextSpan(text: "LOGIN", style: TextStyle(color: Color(0xFF0C99C3), fontWeight: FontWeight.w700)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
+  }
+
+  Widget _input(String label, TextEditingController ctrl,
+      {TextInputType keyboard = TextInputType.text, String? Function(String?)? validator}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: ctrl,
+          keyboardType: keyboard,
+          validator: validator ?? (v) => (v == null || v.isEmpty) ? "Required" : null,
+          decoration: _fieldDecoration(),
+        ),
+      ],
+    );
+  }
+
+  Widget _passwordInput(String label, TextEditingController ctrl, {required bool isConfirm}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: ctrl,
+          obscureText: isConfirm ? !showConfirmPassword : !showPassword,
+          validator: (v) {
+            if (v == null || v.isEmpty) return "Required";
+            if (isConfirm && v != passwordController.text) return "Passwords do not match";
+            if (!isConfirm && v.length < 6) return "Min 6 characters";
+            return null;
+          },
+          decoration: _fieldDecoration().copyWith(
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    (isConfirm ? showConfirmPassword : showPassword) ? Icons.visibility_off : Icons.visibility,
+                    color: const Color(0xFF94A3B8),
+                  ),
+                  onPressed: () => setState(
+                    () => isConfirm ? showConfirmPassword = !showConfirmPassword : showPassword = !showPassword,
+                  ),
+                ),
+              ),
+        ),
+      ],
+    );
+  }
+
+  InputDecoration _fieldDecoration() {
+    return InputDecoration(
+      filled: true,
+      fillColor: const Color(0xFFF8FAFC),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: widget.primary, width: 1.6),
+      ),
+    );
+  }
+
+  String? _emailValidator(String? v) {
+    if (v == null || v.isEmpty) return "Required";
+    if (!v.contains('@') || !v.contains('.')) return "Enter a valid email";
+    return null;
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => loading = true);
+
+    final ok = await register(
+      fullName: fullNameController.text.trim(),
+      email: emailController.text.trim(),
+      password: passwordController.text.trim(),
+      phone: phoneController.text.trim(),
+      countryCode: countryCodeController.text.trim(),
+    );
+
+    setState(() => loading = false);
+    if (!mounted) return;
+
+    if (ok) {
+      Navigator.pushReplacementNamed(context, '/dashboard');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Signup failed. Please try again.")),
+      );
+    }
   }
 }
 
