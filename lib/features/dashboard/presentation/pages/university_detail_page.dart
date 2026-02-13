@@ -22,9 +22,7 @@ class UniversityDetailPage extends StatelessWidget {
           children: [
             Row(
               children: [
-                logo != null
-                    ? CircleAvatar(radius: 28, backgroundImage: NetworkImage(logo))
-                    : const CircleAvatar(radius: 28, child: Icon(Icons.school)),
+                _logoAvatar(logo),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -57,6 +55,25 @@ class UniversityDetailPage extends StatelessWidget {
                 label: const Text('Visit website'),
               ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _logoAvatar(String? url) {
+    if (url == null || url.isEmpty) {
+      return const CircleAvatar(radius: 28, child: Icon(Icons.school));
+    }
+    return CircleAvatar(
+      radius: 28,
+      backgroundColor: Colors.blue.shade50,
+      child: ClipOval(
+        child: Image.network(
+          url,
+          width: 56,
+          height: 56,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const Icon(Icons.school, color: Color(0xFF0B6FAB)),
         ),
       ),
     );

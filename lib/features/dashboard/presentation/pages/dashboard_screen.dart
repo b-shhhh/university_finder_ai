@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:csv/csv.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../../core/api/api_endpoints.dart';
@@ -31,6 +33,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool showAllCountries = false;
   bool showAllCourses = false;
   bool showMoreUniversities = false;
+  bool usedCsvFallback = false;
+  List<String> courseCountries = [];
 
   final TextEditingController searchController = TextEditingController();
 
@@ -69,14 +73,74 @@ class _DashboardScreenState extends State<DashboardScreen> {
         recommendations = (recPayload['recommendations'] ?? []) as List;
         deadlines = (recPayload['deadlines'] ?? []) as List;
         loading = false;
+        usedCsvFallback = false;
       });
     } catch (e) {
-      debugPrint(e.toString());
+      debugPrint("Backend load failed, trying CSV fallback: $e");
+      await loadCsvData();
+    }
+  }
+
+  Future<void> loadCsvData() async {
+    try {
+      final raw = await rootBundle.loadString('assets/universities.csv');
+      final rows = const CsvToListConverter(eol: '\n').convert(raw);
+      if (rows.isEmpty) throw Exception('universities.csv is empty');
+      final headers = rows.first.map((e) => e.toString()).toList();
+      final data = <Map<String, dynamic>>[];
+      for (var i = 1; i < rows.length; i++) {
+        final row = rows[i];
+        final map = <String, dynamic>{};
+        for (var j = 0; j < headers.length && j < row.length; j++) {
+          map[headers[j]] = row[j];
+        }
+        data.add(map);
+      }
+
+      final extractedCountries = data
+          .map((u) => (u['country'] ?? u['Country'] ?? '').toString())
+          .where((c) => c.isNotEmpty)
+          .toSet()
+          .toList();
+
+      final courseSet = <String>{};
+      for (final u in data) {
+        final rawCourses = u['courses'] ?? u['Courses'] ?? '';
+        final list = rawCourses
+            .toString()
+            .split(RegExp(r'[;,]'))
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty);
+        courseSet.addAll(list);
+        u['courses'] = list.toList();
+      }
+
+      setState(() {
+        countries = extractedCountries;
+        allUniversities = data;
+        universities = List.from(data);
+        courses = courseSet.toList();
+        recommendations = data.take(6).toList();
+        loading = false;
+        usedCsvFallback = true;
+      });
+    } catch (e) {
+      debugPrint("CSV fallback failed: $e");
       setState(() => loading = false);
     }
   }
 
   Future<void> loadUniversities(String code) async {
+    if (usedCsvFallback) {
+      setState(() {
+        universities = allUniversities
+            .where((u) => (u['country'] ?? '').toString().toLowerCase() ==
+                code.toLowerCase())
+            .toList();
+      });
+      return;
+    }
+
     final res = await ApiClient.I.get("${ApiEndpoints.universities}/country/$code");
     setState(() {
       universities = res.data is Map ? (res.data['data'] ?? []) : (res.data ?? []);
@@ -85,14 +149,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> loadByCourse(String course) async {
     setState(() => selectedCourse = course);
+    final filtered = allUniversities
+        .where((u) =>
+            (u['courses'] as List?)
+                    ?.map((e) => e.toString().toLowerCase())
+                    .contains(course.toLowerCase()) ??
+            false)
+        .toList();
+
+    courseCountries = filtered
+        .map((u) => (u['country'] ?? '').toString())
+        .where((c) => c.isNotEmpty)
+        .toSet()
+        .toList();
+
     setState(() {
-      universities = allUniversities
-          .where((u) =>
-              (u['courses'] as List?)
-                  ?.map((e) => e.toString().toLowerCase())
-                  .contains(course.toLowerCase()) ??
-              false)
-          .toList();
+      universities = filtered;
     });
   }
 
@@ -100,14 +172,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final isSaved = savedIds.contains(id);
     try {
       if (isSaved) {
-        await ApiClient.I.delete("${ApiEndpoints.savedUniversities}/$id");
+        if (!usedCsvFallback) {
+          await ApiClient.I.delete("${ApiEndpoints.savedUniversities}/$id");
+        }
         savedIds.remove(id);
       } else {
-        await ApiClient.I.post(ApiEndpoints.savedUniversities, data: {'universityId': id});
+        if (!usedCsvFallback) {
+          await ApiClient.I.post(ApiEndpoints.savedUniversities, data: {'universityId': id});
+        }
         savedIds.add(id);
       }
       setState(() {});
     } catch (e) {
+      // Fall back to local toggle for CSV mode
+      if (usedCsvFallback) {
+        if (isSaved) {
+          savedIds.remove(id);
+        } else {
+          savedIds.add(id);
+        }
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Saved locally (offline mode).')),
+        );
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Save failed: $e')),
       );
@@ -123,7 +212,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ?.map((e) => e.toString().toLowerCase())
                     .contains(selectedCourse!.toLowerCase()) ??
                 false)
-            .toList();
+        .toList();
     setState(() {
       universities = base
           .where(
@@ -191,8 +280,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     _buildCourses(),
                     const SizedBox(height: 16),
                     _buildTopUniversities(topUniversities),
-                    const SizedBox(height: 24),
-                    _buildDeadlines(),
                   ],
                 ),
               ),
@@ -302,11 +389,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildCountries() {
-    final display = showAllCountries ? countries : countries.take(3).toList();
+    final source = selectedCourse != null && courseCountries.isNotEmpty
+        ? courseCountries
+        : countries;
+    final display = showAllCountries ? source : source.take(3).toList();
     return _sectionCard(
       title: "Countries",
       trailingText:
-          "${countries.length} total",
+          "${source.length} total",
       child: Column(
         children: [
           SizedBox(
@@ -336,12 +426,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     child: Row(
                       children: [
-                        CircleAvatar(
-                          radius: 16,
-                          backgroundColor: Colors.blue.shade50,
-                          child: Text(
-                            code.length > 2 ? code.substring(0, 2).toUpperCase() : code.toUpperCase(),
-                            style: const TextStyle(color: Color(0xFF0B6FAB)),
+                        ClipOval(
+                          child: Image.network(
+                            _flagUrl(code),
+                            width: 32,
+                            height: 32,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              width: 32,
+                              height: 32,
+                              color: Colors.blue.shade50,
+                              alignment: Alignment.center,
+                              child: Text(
+                                code.length > 2
+                                    ? code.substring(0, 2).toUpperCase()
+                                    : code.toUpperCase(),
+                                style: const TextStyle(color: Color(0xFF0B6FAB)),
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -454,14 +556,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  radius: 22,
-                  backgroundColor: Colors.blue.shade50,
-                  backgroundImage: logo != null ? NetworkImage(logo) : null,
-                  child: logo == null
-                      ? const Icon(Icons.school, color: Color(0xFF0B6FAB))
-                      : null,
-                ),
+                _logoAvatar(logo),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -524,24 +619,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildDeadlines() {
-    if (deadlines.isEmpty) return const SizedBox.shrink();
-    return _sectionCard(
-      title: "Upcoming deadlines",
-      trailingText: "${deadlines.length} total",
-      child: Column(
-        children: deadlines.take(3).map((d) {
-          return ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.event, color: Color(0xFF0B6FAB)),
-            title: Text(d['title'] ?? ''),
-            subtitle: Text(d['date'] ?? ''),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
   Widget _sectionCard({required String title, String? trailingText, required Widget child}) {
     return Container(
       width: double.infinity,
@@ -577,6 +654,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 12),
           child,
         ],
+      ),
+    );
+  }
+
+  String _flagUrl(String country) {
+    final trimmed = country.trim();
+    final isCode = trimmed.length == 2;
+    if (isCode) {
+      return "https://flagcdn.com/48x36/${trimmed.toLowerCase()}.png";
+    }
+    return "https://countryflagsapi.com/png/${Uri.encodeComponent(trimmed)}";
+  }
+
+  Widget _logoAvatar(String? url) {
+    if (url == null || url.isEmpty) {
+      return CircleAvatar(
+        radius: 22,
+        backgroundColor: Colors.blue.shade50,
+        child: const Icon(Icons.school, color: Color(0xFF0B6FAB)),
+      );
+    }
+    return CircleAvatar(
+      radius: 22,
+      backgroundColor: Colors.blue.shade50,
+      child: ClipOval(
+        child: Image.network(
+          url,
+          width: 44,
+          height: 44,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const Icon(Icons.school, color: Color(0xFF0B6FAB)),
+        ),
       ),
     );
   }

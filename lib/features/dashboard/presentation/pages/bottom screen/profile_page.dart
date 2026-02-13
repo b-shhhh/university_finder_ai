@@ -120,7 +120,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final avatarUrl = user['profilePic']?.toString();
+    final avatarUrl = _resolveAvatarUrl(user['profilePic']?.toString());
     final name = user['fullName'] ?? 'User';
     final email = user['email'] ?? '';
 
@@ -369,5 +369,19 @@ class _ProfilePageState extends State<ProfilePage> {
         );
       },
     );
+  }
+
+  String? _resolveAvatarUrl(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    final lower = raw.toLowerCase();
+    if (lower.startsWith('http')) return raw;
+
+    // Extract filename
+    final afterUploads = raw.split(RegExp(r'uploads[\\/]+')).length > 1
+        ? raw.split(RegExp(r'uploads[\\/]+')).last
+        : raw.split(RegExp(r'[\\\\/]')).last;
+
+    final origin = ApiEndpoints.baseUrl.replaceFirst(RegExp(r'/api/?$'), '');
+    return '$origin/uploads/$afterUploads';
   }
 }
