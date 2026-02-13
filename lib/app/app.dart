@@ -7,6 +7,7 @@ import '../features/onboarding/presentation/page/onboarding_screen.dart';
 import '../features/splash/presentation/page/splash_screen.dart';
 import '../features/auth/presentation/pages/forgot_password.dart';
 import '../features/auth/presentation/pages/reset_password.dart';
+import 'theme/theme_data.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -17,7 +18,7 @@ class MyApp extends StatelessWidget {
       title: 'UniGuide',
       debugShowCheckedModeBanner: false,
       theme: getApplicationTheme(),
-      // darkTheme: getDarkTheme(), // only if you define it
+      darkTheme: getDarkTheme(),
       themeMode: ThemeMode.system,
       initialRoute: '/',
       routes: {
