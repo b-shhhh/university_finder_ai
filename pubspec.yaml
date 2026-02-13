@@ -12,6 +12,7 @@ dependencies:
   flutter:
     sdk: flutter
   hive_test: ^1.0.0
+  url_launcher: ^6.2.5
 
 
   # The following adds the Cupertino Icons font to your application.

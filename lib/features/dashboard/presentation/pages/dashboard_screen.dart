@@ -1,7 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../../../common/navigation_bar.dart';
-import '../../../dashboard/presentation/pages/bottom screen/application_page.dart';
-import '../../../dashboard/presentation/pages/bottom screen/profile_page.dart';
+import 'bottom screen/application_page.dart';
+import 'bottom screen/profile_page.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -11,134 +15,192 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  int _currentIndex = 0; // track the selected tab
+  int _currentIndex = 0;
 
-  void _onNavTap(int index) {
-    if (index == _currentIndex) return; // already on this tab
+  final String baseUrl = "http://10.0.2.2:3000/api/dashboard";
+
+  List countries = [];
+  List universities = [];
+  bool loading = true;
+
+  final TextEditingController searchController = TextEditingController();
+
+  // ================= INIT =================
+  @override
+  void initState() {
+    super.initState();
+    loadData();
+  }
+
+  // ================= API =================
+
+  Future<void> loadData() async {
+    try {
+      final c = await http.get(Uri.parse("$baseUrl/countries"));
+      final u =
+      await http.get(Uri.parse("$baseUrl/country/US/universities"));
+
+      setState(() {
+        countries = jsonDecode(c.body);
+        universities = jsonDecode(u.body);
+        loading = false;
+      });
+    } catch (e) {
+      debugPrint(e.toString());
+    }
+  }
+
+  Future<void> loadUniversities(String code) async {
+    final res =
+    await http.get(Uri.parse("$baseUrl/country/$code/universities"));
 
     setState(() {
-      _currentIndex = index;
+      universities = jsonDecode(res.body);
     });
+  }
+
+  void searchUniversities(String query) {
+    setState(() {
+      universities = universities
+          .where((u) =>
+          u['name'].toLowerCase().contains(query.toLowerCase()))
+          .toList();
+    });
+  }
+
+  // ================= NAV =================
+
+  void _onNavTap(int index) {
+    if (index == _currentIndex) return;
+
+    setState(() => _currentIndex = index);
 
     if (index == 1) {
-      // Navigate to Application Page
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const ApplicationPage()),
+        MaterialPageRoute(builder: (_) => const ApplicationPage()),
       );
     } else if (index == 2) {
-      // Navigate to Profile Page
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const ProfilePage()),
+        MaterialPageRoute(builder: (_) => const ProfilePage()),
       );
     }
   }
+
+  // ================= UI =================
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Explore Courses'),
+        title: const Text("Explore Universities"),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
       ),
-      body: SingleChildScrollView(
+      bottomNavigationBar:
+      MyNavigationBar(currentIndex: _currentIndex, onTap: _onNavTap),
+
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Your existing dashboard UI here
+
+            // ================= SEARCH =================
             TextField(
+              controller: searchController,
+              onChanged: searchUniversities,
               decoration: InputDecoration(
-                hintText: 'Search universities, courses...',
+                hintText: "Search universities...",
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+
+            const SizedBox(height: 16),
+
+            // ================= AI BUTTON =================
             ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: () {
+                // TODO: navigate to AI finder
+              },
               icon: const Icon(Icons.auto_awesome),
-              label: const Text('Try our AI to find your course →'),
+              label: const Text("AI University Finder"),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blueAccent,
-                foregroundColor: Colors.white,
                 minimumSize: const Size.fromHeight(48),
               ),
             ),
-            const SizedBox(height: 24),
-            const Text('Popular Destinations', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _flagIcon('USA'),
-                _flagIcon('UK'),
-                _flagIcon('Australia'),
-              ],
-            ),
-            const SizedBox(height: 24),
-            const Text('In-Demand Courses', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 12,
-              children: [
-                _courseChip('Computer Science'),
-                _courseChip('Business'),
-              ],
-            ),
-            const SizedBox(height: 24),
-            const Text('Top Universities', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            Column(
-              children: [
-                _universityCard('Stanford University', 'USA', 4.9),
-                _universityCard('Oxford University', 'UK', 4.8),
-              ],
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: MyNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: _onNavTap,
-      ),
-    );
-  }
 
-  Widget _flagIcon(String country) {
-    return Column(
-      children: [
-        CircleAvatar(radius: 24, child: Text(country[0])), // Replace with flag image later
-        const SizedBox(height: 4),
-        Text(country),
-      ],
-    );
-  }
+            const SizedBox(height: 24),
 
-  Widget _courseChip(String course) {
-    return Chip(
-      label: Text(course),
-      backgroundColor: Colors.grey.shade200,
-    );
-  }
+            // ================= COUNTRIES =================
+            const Text(
+              "Countries",
+              style: TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.bold),
+            ),
 
-  Widget _universityCard(String name, String country, double rating) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: ListTile(
-        leading: const Icon(Icons.school),
-        title: Text(name),
-        subtitle: Text(country),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.star, color: Colors.amber),
-            Text(rating.toString()),
+            const SizedBox(height: 12),
+
+            SizedBox(
+              height: 90,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: countries.length,
+                itemBuilder: (_, i) {
+                  final c = countries[i];
+
+                  return GestureDetector(
+                    onTap: () => loadUniversities(c['code']),
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 14),
+                      child: Column(
+                        children: [
+                          CircleAvatar(
+                            radius: 26,
+                            backgroundImage:
+                            NetworkImage(c['flag']),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(c['code']),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // ================= UNIVERSITIES =================
+            const Text(
+              "Universities",
+              style: TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 12),
+
+            ...universities.map((u) {
+              return Card(
+                child: ListTile(
+                  leading: const Icon(Icons.school),
+                  title: Text(u['name']),
+                  subtitle: Text(u['country']),
+                  trailing: const Icon(Icons.open_in_new),
+                  onTap: () async {
+                    await launchUrl(Uri.parse(u['website']));
+                  },
+                ),
+              );
+            }),
           ],
         ),
       ),
