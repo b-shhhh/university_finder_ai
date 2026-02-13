@@ -4,8 +4,7 @@ import 'package:http/http.dart' as http;
 
 // API call
 Future<bool> register({
-  required String firstName,
-  required String lastName,
+  required String fullName,
   required String email,
   required String password,
   required String phone,
@@ -18,8 +17,7 @@ Future<bool> register({
       url,
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({
-        "firstname": firstName,
-        "lastname": lastName,
+        "fullName": fullName,
         "email": email,
         "password": password,
         "phone": phone,
@@ -55,8 +53,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool showConfirmPassword = false;
 
   // Controllers
-  final TextEditingController firstNameController = TextEditingController();
-  final TextEditingController lastNameController = TextEditingController();
+  final TextEditingController fullNameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController = TextEditingController();
@@ -158,9 +155,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildTextField('First Name', Icons.person_outline, controller: firstNameController),
-            const SizedBox(height: 16),
-            _buildTextField('Last Name', Icons.person_outline, controller: lastNameController),
+            _buildTextField('Full Name', Icons.person_outline, controller: fullNameController),
             const SizedBox(height: 16),
             _buildTextField('Email Address', Icons.alternate_email_rounded,
                 keyboardType: TextInputType.emailAddress, controller: emailController),
@@ -292,8 +287,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             }
 
             bool success = await register(
-              firstName: firstNameController.text.trim(),
-              lastName: lastNameController.text.trim(),
+              fullName: fullNameController.text.trim(),
               email: emailController.text.trim(),
               password: passwordController.text.trim(),
               phone: phoneController.text.trim(),

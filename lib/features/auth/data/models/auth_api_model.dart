@@ -5,16 +5,14 @@ part 'auth_api_model.g.dart';
 
 @JsonSerializable()
 class AuthApiModel {
-  final String firstName;
-  final String lastName;
+  final String fullName;
   final String email;
   final String password;
   final String phone;
   final String education;
 
   AuthApiModel({
-    required this.firstName,
-    required this.lastName,
+    required this.fullName,
     required this.email,
     required this.password,
     required this.phone,
@@ -31,8 +29,7 @@ class AuthApiModel {
   // Convert to domain entity
   AuthEntity toEntity() {
     return AuthEntity(
-      firstName: firstName,
-      lastName: lastName,
+      fullName: fullName,
       email: email,
       password: password,
       phone: phone,

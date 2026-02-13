@@ -16,12 +16,11 @@ void main() {
       await tester.pumpAndSettle();
 
       // Find all text fields
-      final firstNameField = find.byType(TextFormField).at(0);
-      final lastNameField = find.byType(TextFormField).at(1);
-      final emailField = find.byType(TextFormField).at(2);
-      final passwordField = find.byType(TextFormField).at(3);
-      final confirmPasswordField = find.byType(TextFormField).at(4);
-      final phoneField = find.byType(TextFormField).at(5);
+      final fullNameField = find.byType(TextFormField).at(0);
+      final emailField = find.byType(TextFormField).at(1);
+      final passwordField = find.byType(TextFormField).at(2);
+      final confirmPasswordField = find.byType(TextFormField).at(3);
+      final phoneField = find.byType(TextFormField).at(4);
 
       // Dropdown
       final educationDropdown = find.byType(DropdownButtonFormField<String>);
@@ -31,8 +30,7 @@ void main() {
       final loginTextButton = find.byType(TextButton);
 
       // Assertions
-      expect(firstNameField, findsOneWidget);
-      expect(lastNameField, findsOneWidget);
+      expect(fullNameField, findsOneWidget);
       expect(emailField, findsOneWidget);
       expect(passwordField, findsOneWidget);
       expect(confirmPasswordField, findsOneWidget);

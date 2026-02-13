@@ -4,26 +4,22 @@ part 'auth_hive_model.g.dart';
 @HiveType(typeId: 0)
 class AuthHiveModel extends HiveObject {
   @HiveField(0)
-  String firstName;
+  String fullName;
 
   @HiveField(1)
-  String lastName;
-
-  @HiveField(2)
   String email;
 
-  @HiveField(3)
+  @HiveField(2)
   String password;
 
-  @HiveField(4)
+  @HiveField(3)
   String phone;
 
-  @HiveField(5)
+  @HiveField(4)
   String education;
 
   AuthHiveModel({
-    required this.firstName,
-    required this.lastName,
+    required this.fullName,
     required this.email,
     required this.password,
     required this.phone,

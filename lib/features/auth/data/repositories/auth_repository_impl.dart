@@ -10,8 +10,7 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<void> registerUser(AuthEntity user) async {
     final box = await Hive.openBox<AuthHiveModel>(hiveBoxName);
     final hiveUser = AuthHiveModel(
-      firstName: user.firstName,
-      lastName: user.lastName,
+      fullName: user.fullName,
       email: user.email,
       password: user.password,
       phone: user.phone,
@@ -26,8 +25,7 @@ class AuthRepositoryImpl implements AuthRepository {
     final hiveUser = box.get(email);
     if (hiveUser != null && hiveUser.password == password) {
       return AuthEntity(
-        firstName: hiveUser.firstName,
-        lastName: hiveUser.lastName,
+        fullName: hiveUser.fullName,
         email: hiveUser.email,
         password: hiveUser.password,
         phone: hiveUser.phone,

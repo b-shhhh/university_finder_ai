@@ -17,8 +17,7 @@ void main() {
   });
 
   final testUser = AuthEntity(
-    firstName: 'John',
-    lastName: 'Doe',
+    fullName: 'John Doe',
     email: 'test@example.com',
     password: '123456',
     phone: '1234567890',
