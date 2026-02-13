@@ -36,6 +36,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool showMoreUniversities = false;
   bool usedCsvFallback = false;
   List<String> courseCountries = [];
+  Map<String, int> countryCounts = {};
 
   final TextEditingController searchController = TextEditingController();
 
@@ -75,6 +76,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         deadlines = (recPayload['deadlines'] ?? []) as List;
         loading = false;
         usedCsvFallback = false;
+        countryCounts = _buildCountryCounts(allUniversities);
       });
     } catch (e) {
       debugPrint("Backend load failed, trying CSV fallback: $e");
@@ -124,6 +126,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         recommendations = data.take(6).toList();
         loading = false;
         usedCsvFallback = true;
+        countryCounts = _buildCountryCounts(data);
       });
     } catch (e) {
       debugPrint("CSV fallback failed: $e");
@@ -436,6 +439,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                         ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${countryCounts[code] ?? 0}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -551,9 +563,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           fontSize: 16,
                         ),
                       ),
-                      Text(
-                        [country, city].where((e) => (e ?? '').toString().isNotEmpty).join(" • "),
-                        style: const TextStyle(color: Colors.grey),
+                      Row(
+                        children: [
+                          if (country.toString().isNotEmpty) ...[
+                            _countryFlag(country),
+                            const SizedBox(width: 6),
+                          ],
+                          Expanded(
+                            child: Text(
+                              [country, city]
+                                  .where((e) => (e ?? '').toString().isNotEmpty)
+                                  .join(" • "),
+                              style: const TextStyle(color: Colors.grey),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -664,10 +689,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _countryFlag(String codeOrName) {
-    final iso = codeOrName.trim();
-    if (iso.length == 2) {
+    final iso = _isoForCountry(codeOrName);
+    if (iso != null && iso.length == 2) {
       return CountryFlags.flag(
-        iso.toUpperCase(),
+        iso,
         width: 32,
         height: 24,
         borderRadius: 6,
@@ -682,9 +707,128 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       alignment: Alignment.center,
       child: Text(
-        iso.isNotEmpty ? iso.substring(0, iso.length >= 2 ? 2 : 1).toUpperCase() : '--',
+        codeOrName.isNotEmpty
+            ? codeOrName.substring(0, codeOrName.length >= 2 ? 2 : 1).toUpperCase()
+            : '--',
         style: const TextStyle(color: Color(0xFF0B6FAB), fontWeight: FontWeight.w700),
       ),
     );
+  }
+
+  // Heuristic ISO resolver: works when backend returns country name; if already code, returns uppercase.
+  String? _isoForCountry(String value) {
+    final v = value.trim();
+    if (v.isEmpty) return null;
+    if (v.length == 2) return v.toUpperCase();
+    final key = v.toLowerCase();
+    const map = {
+      'united states': 'US',
+      'united states of america': 'US',
+      'usa': 'US',
+      'uk': 'GB',
+      'united kingdom': 'GB',
+      'england': 'GB',
+      'scotland': 'GB',
+      'wales': 'GB',
+      'northern ireland': 'GB',
+      'canada': 'CA',
+      'australia': 'AU',
+      'new zealand': 'NZ',
+      'india': 'IN',
+      'china': 'CN',
+      'japan': 'JP',
+      'south korea': 'KR',
+      'korea, republic of': 'KR',
+      'germany': 'DE',
+      'france': 'FR',
+      'italy': 'IT',
+      'spain': 'ES',
+      'portugal': 'PT',
+      'russia': 'RU',
+      'brazil': 'BR',
+      'mexico': 'MX',
+      'argentina': 'AR',
+      'chile': 'CL',
+      'peru': 'PE',
+      'colombia': 'CO',
+      'south africa': 'ZA',
+      'nigeria': 'NG',
+      'kenya': 'KE',
+      'egypt': 'EG',
+      'saudi arabia': 'SA',
+      'united arab emirates': 'AE',
+      'uae': 'AE',
+      'qatar': 'QA',
+      'singapore': 'SG',
+      'malaysia': 'MY',
+      'thailand': 'TH',
+      'vietnam': 'VN',
+      'indonesia': 'ID',
+      'philippines': 'PH',
+      'turkey': 'TR',
+      'netherlands': 'NL',
+      'sweden': 'SE',
+      'norway': 'NO',
+      'finland': 'FI',
+      'denmark': 'DK',
+      'switzerland': 'CH',
+      'austria': 'AT',
+      'belgium': 'BE',
+      'ireland': 'IE',
+      'poland': 'PL',
+      'czech republic': 'CZ',
+      'czechia': 'CZ',
+      'hungary': 'HU',
+      'greece': 'GR',
+      'israel': 'IL',
+      'lebanon': 'LB',
+      'pakistan': 'PK',
+      'bangladesh': 'BD',
+      'sri lanka': 'LK',
+      'nepal': 'NP',
+      'bhutan': 'BT',
+      'myanmar': 'MM',
+      'oman': 'OM',
+      'kuwait': 'KW',
+      'bahrain': 'BH',
+      'luxembourg': 'LU',
+      'iceland': 'IS',
+      'estonia': 'EE',
+      'latvia': 'LV',
+      'lithuania': 'LT',
+      'slovakia': 'SK',
+      'slovenia': 'SI',
+      'croatia': 'HR',
+      'serbia': 'RS',
+      'romania': 'RO',
+      'bulgaria': 'BG',
+      'ukraine': 'UA',
+      'belarus': 'BY',
+      'georgia': 'GE',
+      'armenia': 'AM',
+      'azerbaijan': 'AZ',
+      'morocco': 'MA',
+      'algeria': 'DZ',
+      'tunisia': 'TN',
+      'ghana': 'GH',
+      'ethiopia': 'ET',
+      'tanzania': 'TZ',
+      'uganda': 'UG',
+      'zambia': 'ZM',
+      'zimbabwe': 'ZW',
+      'botswana': 'BW',
+      'namibia': 'NA',
+    };
+    return map[key];
+  }
+
+  Map<String, int> _buildCountryCounts(List list) {
+    final counts = <String, int>{};
+    for (final u in list) {
+      final c = (u['country'] ?? '').toString();
+      if (c.isEmpty) continue;
+      counts[c] = (counts[c] ?? 0) + 1;
+    }
+    return counts;
   }
 }
