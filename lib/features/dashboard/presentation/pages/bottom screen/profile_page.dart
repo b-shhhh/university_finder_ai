@@ -18,6 +18,12 @@ class _ProfilePageState extends State<ProfilePage> {
   Map<String, dynamic> user = {};
   File? _localImage;
   final _picker = ImagePicker();
+  final _formKey = GlobalKey<FormState>();
+  final _nameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _countryCtrl = TextEditingController();
+  final _bioCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -30,7 +36,14 @@ class _ProfilePageState extends State<ProfilePage> {
     try {
       final res = await ApiClient.I.get(ApiEndpoints.userProfile);
       final data = res.data is Map ? (res.data['data'] ?? res.data) : res.data;
-      setState(() => user = Map<String, dynamic>.from(data));
+      setState(() {
+        user = Map<String, dynamic>.from(data);
+        _nameCtrl.text = user['fullName'] ?? '';
+        _emailCtrl.text = user['email'] ?? '';
+        _phoneCtrl.text = user['phone'] ?? '';
+        _countryCtrl.text = user['country'] ?? '';
+        _bioCtrl.text = user['bio'] ?? '';
+      });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to load profile: $e')),
@@ -78,6 +91,33 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  Future<void> _saveProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _loading = true);
+    try {
+      final res = await ApiClient.I.put(ApiEndpoints.updateProfile, data: {
+        'fullName': _nameCtrl.text.trim(),
+        'email': _emailCtrl.text.trim(),
+        'phone': _phoneCtrl.text.trim(),
+        'country': _countryCtrl.text.trim(),
+        'bio': _bioCtrl.text.trim(),
+      });
+      final updated = res.data is Map ? (res.data['data'] ?? res.data) : res.data;
+      setState(() => user = Map<String, dynamic>.from(updated));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile saved')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Save failed: $e')),
+      );
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final avatarUrl = user['profilePic']?.toString();
@@ -93,46 +133,97 @@ class _ProfilePageState extends State<ProfilePage> {
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  GestureDetector(
-                    onTap: _showImagePickerSheet,
-                    child: CircleAvatar(
-                      radius: 60,
-                      backgroundImage: _localImage != null
-                          ? FileImage(_localImage!)
-                          : (avatarUrl != null && avatarUrl.isNotEmpty)
-                              ? NetworkImage(avatarUrl) as ImageProvider
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: GestureDetector(
+                        onTap: _showImagePickerSheet,
+                        child: CircleAvatar(
+                          radius: 60,
+                          backgroundImage: _localImage != null
+                              ? FileImage(_localImage!)
+                              : (avatarUrl != null && avatarUrl.isNotEmpty)
+                                  ? NetworkImage(avatarUrl) as ImageProvider
+                                  : null,
+                          backgroundColor: Colors.grey.shade300,
+                          child: (_localImage == null && (avatarUrl == null || avatarUrl.isEmpty))
+                              ? const Icon(Icons.person, size: 60, color: Colors.white)
                               : null,
-                      backgroundColor: Colors.grey.shade300,
-                      child: (_localImage == null && (avatarUrl == null || avatarUrl.isEmpty))
-                          ? const Icon(Icons.person, size: 60, color: Colors.white)
-                          : null,
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 6),
-                  Text(email, style: const TextStyle(fontSize: 16, color: Colors.grey)),
-                  const SizedBox(height: 24),
-                  ListTile(
-                    leading: const Icon(Icons.person_outline),
-                    title: const Text('Reload profile'),
-                    trailing: const Icon(Icons.refresh),
-                    onTap: _loadProfile,
-                  ),
-                  const Divider(),
-                  ListTile(
-                    leading: const Icon(Icons.logout, color: Colors.orange),
-                    title: const Text('Logout', style: TextStyle(color: Colors.orange)),
-                    onTap: _logout,
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.delete_forever, color: Colors.red),
-                    title: const Text('Delete account', style: TextStyle(color: Colors.red)),
-                    onTap: _confirmDelete,
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    Center(child: Text(name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold))),
+                    const SizedBox(height: 6),
+                    Center(child: Text(email, style: const TextStyle(fontSize: 16, color: Colors.grey))),
+                    const SizedBox(height: 24),
+
+                    const Text('Full name'),
+                    TextFormField(
+                      controller: _nameCtrl,
+                      validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text('Email'),
+                    TextFormField(
+                      controller: _emailCtrl,
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (v) => v != null && v.contains('@') ? null : 'Enter valid email',
+                    ),
+                    const SizedBox(height: 12),
+                    const Text('Phone'),
+                    TextFormField(
+                      controller: _phoneCtrl,
+                      keyboardType: TextInputType.phone,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text('Country'),
+                    TextFormField(
+                      controller: _countryCtrl,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text('Bio'),
+                    TextFormField(
+                      controller: _bioCtrl,
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _saveProfile,
+                        icon: const Icon(Icons.save),
+                        label: const Text('Save profile'),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ListTile(
+                      leading: const Icon(Icons.person_outline),
+                      title: const Text('Reload profile'),
+                      trailing: const Icon(Icons.refresh),
+                      onTap: _loadProfile,
+                    ),
+                    const Divider(),
+                    ListTile(
+                      leading: const Icon(Icons.lock_reset),
+                      title: const Text('Change password'),
+                      onTap: () => Navigator.pushNamed(context, '/change-password'),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.logout, color: Colors.orange),
+                      title: const Text('Logout', style: TextStyle(color: Colors.orange)),
+                      onTap: _logout,
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.delete_forever, color: Colors.red),
+                      title: const Text('Delete account', style: TextStyle(color: Colors.red)),
+                      onTap: _confirmDelete,
+                    ),
+                  ],
+                ),
               ),
             ),
     );

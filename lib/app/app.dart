@@ -7,6 +7,7 @@ import '../features/onboarding/presentation/page/onboarding_screen.dart';
 import '../features/splash/presentation/page/splash_screen.dart';
 import '../features/auth/presentation/pages/forgot_password.dart';
 import '../features/auth/presentation/pages/reset_password.dart';
+import '../features/auth/presentation/pages/change_password.dart';
 import 'theme/theme_data.dart';
 
 class MyApp extends StatelessWidget {
@@ -29,6 +30,7 @@ class MyApp extends StatelessWidget {
         '/dashboard': (_) => DashboardScreen(),
         '/forgot-password': (_) => const ForgotPasswordScreen(),
         '/reset-password': (_) => const ResetPasswordScreen(),
+        '/change-password': (_) => const ChangePasswordScreen(),
       },
     );
   }
