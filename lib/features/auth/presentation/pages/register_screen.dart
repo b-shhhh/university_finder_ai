@@ -8,8 +8,7 @@ Future<bool> register({
   required String email,
   required String password,
   required String phone,
-  required String education,
-}) async {
+  }) async {
   final url = Uri.parse("http://10.0.2.2:3000/api/auth/register");
 
   try {
@@ -21,7 +20,7 @@ Future<bool> register({
         "email": email,
         "password": password,
         "phone": phone,
-        "education": education,
+        "education": "Not specified",
       }),
     );
 
@@ -48,7 +47,6 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  String? selectedEducation;
   bool showPassword = false;
   bool showConfirmPassword = false;
 
@@ -168,17 +166,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 controller: confirmPasswordController),
             const SizedBox(height: 16),
             _buildTextField('Phone', Icons.phone_iphone_rounded, keyboardType: TextInputType.phone, controller: phoneController),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: selectedEducation,
-              icon: const Icon(Icons.keyboard_arrow_down_rounded),
-              decoration: _inputDecoration('Education', Icons.school_outlined),
-              style: const TextStyle(color: Colors.black, fontSize: 15),
-              items: ['High School', 'Bachelors', 'Masters']
-                  .map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 14, color: Colors.black)))).toList(),
-              onChanged: (v) => setState(() => selectedEducation = v),
-              validator: (v) => v == null || v.isEmpty ? 'Please select your education' : null,
-            ),
             const SizedBox(height: 24),
             _buildSubmitButton(),
             const SizedBox(height: 8),
@@ -291,7 +278,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               email: emailController.text.trim(),
               password: passwordController.text.trim(),
               phone: phoneController.text.trim(),
-              education: selectedEducation!,
             );
 
             if (success) {
@@ -317,3 +303,4 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
+

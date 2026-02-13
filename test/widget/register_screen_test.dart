@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('RegisterScreen Widget Test', () {
-    testWidgets('All input fields, dropdown, and buttons exist', (WidgetTester tester) async {
+    testWidgets('All input fields and buttons exist', (WidgetTester tester) async {
       // Wrap the screen in MaterialApp for routing
       await tester.pumpWidget(
         MaterialApp(
@@ -22,9 +22,6 @@ void main() {
       final confirmPasswordField = find.byType(TextFormField).at(3);
       final phoneField = find.byType(TextFormField).at(4);
 
-      // Dropdown
-      final educationDropdown = find.byType(DropdownButtonFormField<String>);
-
       // Buttons
       final registerButton = find.widgetWithText(ElevatedButton, 'Register');
       final loginTextButton = find.byType(TextButton);
@@ -35,36 +32,8 @@ void main() {
       expect(passwordField, findsOneWidget);
       expect(confirmPasswordField, findsOneWidget);
       expect(phoneField, findsOneWidget);
-      expect(educationDropdown, findsOneWidget);
       expect(registerButton, findsOneWidget);
       expect(loginTextButton, findsOneWidget);
-    });
-
-    testWidgets('Dropdown can be selected', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: const RegisterScreen(),
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      final educationDropdown = find.byType(DropdownButtonFormField<String>);
-
-      // Scroll into view
-      await tester.ensureVisible(educationDropdown);
-
-      // Tap dropdown to open menu
-      await tester.tap(educationDropdown);
-      await tester.pumpAndSettle();
-
-      // Select "Bachelors"
-      await tester.tap(find.text('Bachelors').last);
-      await tester.pumpAndSettle();
-
-      // Verify selection
-      final selected = find.text('Bachelors').last;
-      expect(selected, findsOneWidget);
     });
 
     testWidgets('Register button is tappable', (WidgetTester tester) async {
@@ -110,3 +79,4 @@ void main() {
     });
   });
 }
+
