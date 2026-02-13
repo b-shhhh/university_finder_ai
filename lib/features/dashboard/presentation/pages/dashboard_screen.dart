@@ -28,6 +28,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List deadlines = [];
   Set<String> savedIds = {};
   bool loading = true;
+  bool showAllCountries = false;
+  bool showAllCourses = false;
+  bool showMoreUniversities = false;
 
   final TextEditingController searchController = TextEditingController();
 
@@ -157,235 +160,423 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Explore Universities"),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-      ),
-      bottomNavigationBar:
-      MyNavigationBar(currentIndex: _currentIndex, onTap: _onNavTap),
+    final totalUniversities = allUniversities.length;
+    final totalCountries = countries.length;
+    final totalCourses = courses.length;
 
+    List topUniversities = recommendations.isNotEmpty
+        ? recommendations
+        : universities.take(6).toList();
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF3F7FB),
+      bottomNavigationBar:
+          MyNavigationBar(currentIndex: _currentIndex, onTap: _onNavTap),
       body: loading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-
-            // ================= SEARCH =================
-            TextField(
-              controller: searchController,
-              onChanged: searchUniversities,
-              decoration: InputDecoration(
-                hintText: "Search universities...",
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // ================= AI BUTTON =================
-            ElevatedButton.icon(
-              onPressed: () {
-                // TODO: navigate to AI finder
-              },
-              icon: const Icon(Icons.auto_awesome),
-              label: const Text("AI University Finder"),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // ================= COURSES =================
-            if (courses.isNotEmpty) ...[
-              const Text(
-                "Courses",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 44,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: courses.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (_, i) {
-                    final course = courses[i];
-                    final active = course == selectedCourse;
-                    return ChoiceChip(
-                      label: Text(course),
-                      selected: active,
-                      onSelected: (_) => loadByCourse(course),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
-
-            // ================= COUNTRIES =================
-            const Text(
-              "Countries",
-              style: TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-
-            const SizedBox(height: 12),
-
-            SizedBox(
-              height: 90,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: countries.length,
-                itemBuilder: (_, i) {
-                  final code = countries[i];
-                  return GestureDetector(
-                    onTap: () => loadUniversities(code),
-                    child: Container(
-                      margin: const EdgeInsets.only(right: 14),
-                      child: Column(
-                        children: [
-                          CircleAvatar(
-                            radius: 26,
-                            child: Text(code.length > 2 ? code.substring(0, 2).toUpperCase() : code.toUpperCase()),
-                          ),
-                          const SizedBox(height: 6),
-                          SizedBox(
-                            width: 70,
-                            child: Text(
-                              code,
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
+          : SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeroCard(
+                      totalUniversities,
+                      totalCountries,
+                      totalCourses,
                     ),
-                  );
-                },
+                    const SizedBox(height: 16),
+                    _buildCountries(),
+                    const SizedBox(height: 16),
+                    _buildCourses(),
+                    const SizedBox(height: 16),
+                    _buildTopUniversities(topUniversities),
+                    const SizedBox(height: 24),
+                    _buildDeadlines(),
+                  ],
+                ),
               ),
             ),
+    );
+  }
 
-            const SizedBox(height: 24),
+  // ================= UI HELPERS =================
 
-            // ================= UNIVERSITIES =================
-            const Text(
-              "Universities",
-              style: TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.bold),
+  Widget _buildHeroCard(int unis, int countriesCount, int coursesCount) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0B6FAB), Color(0xFF00537A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          )
+        ],
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Dashboard",
+            style: TextStyle(color: Colors.white70, letterSpacing: 0.5),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            "Search universities with clarity.",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
             ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            "Find universities by country, course, and ranking. Save options instantly while you build your shortlist.",
+            style: TextStyle(color: Colors.white70, height: 1.3),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: searchController,
+            onChanged: searchUniversities,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.white,
+              hintText: "Search by university, course, or country...",
+              prefixIcon: const Icon(Icons.search),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _statChip("$unis", "Universities"),
+              _statChip("$countriesCount", "Countries"),
+              _statChip("$coursesCount", "Courses"),
+            ],
+          )
+        ],
+      ),
+    );
+  }
 
-            const SizedBox(height: 12),
+  Widget _statChip(String value, String label) {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white24),
+        ),
+        child: Column(
+          children: [
+            Text(
+              value,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label.toUpperCase(),
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: universities.length > 50 ? 50 : universities.length,
-              itemBuilder: (_, index) {
-                final u = universities[index];
-                final name = u['name'] ?? 'University';
-                final country = u['country'] ?? '';
-                final website = u['web_pages'] ?? u['website'] ?? '';
-                final logo = u['logo_url'];
-                final id = u['id']?.toString() ?? u['_id']?.toString() ?? name;
-                final isSaved = savedIds.contains(id);
-                return Card(
-                  child: ListTile(
-                    leading: logo != null
-                        ? CircleAvatar(backgroundImage: NetworkImage(logo))
-                        : const Icon(Icons.school),
-                    title: Text(name),
-                    subtitle: Text(country),
-                    trailing: Wrap(
-                      spacing: 8,
-                      children: [
-                        IconButton(
-                          icon: Icon(isSaved ? Icons.bookmark : Icons.bookmark_border),
-                          onPressed: () => toggleSave(id),
-                        ),
-                        const Icon(Icons.open_in_new),
+  Widget _buildCountries() {
+    final display = showAllCountries ? countries : countries.take(3).toList();
+    return _sectionCard(
+      title: "Countries",
+      trailingText:
+          "${countries.length} total",
+      child: Column(
+        children: [
+          SizedBox(
+            height: 70,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: display.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemBuilder: (_, i) {
+                final code = display[i];
+                return GestureDetector(
+                  onTap: () => loadUniversities(code),
+                  child: Container(
+                    width: 120,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        )
                       ],
                     ),
-                    onTap: () async {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => UniversityDetailPage(university: u),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 16,
+                          backgroundColor: Colors.blue.shade50,
+                          child: Text(
+                            code.length > 2 ? code.substring(0, 2).toUpperCase() : code.toUpperCase(),
+                            style: const TextStyle(color: Color(0xFF0B6FAB)),
+                          ),
                         ),
-                      );
-                    },
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            code,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
             ),
+          ),
+          if (countries.length > 3)
+            TextButton(
+              onPressed: () => setState(() => showAllCountries = !showAllCountries),
+              child: Text(showAllCountries ? "Show less" : "Show more"),
+            ),
+        ],
+      ),
+    );
+  }
 
-            const SizedBox(height: 32),
+  Widget _buildCourses() {
+    final display = showAllCourses ? courses : courses.take(3).toList();
+    return _sectionCard(
+      title: "Courses",
+      trailingText: "${courses.length} total",
+      child: Column(
+        children: [
+          SizedBox(
+            height: 60,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: display.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemBuilder: (_, i) {
+                final course = display[i];
+                final selected = selectedCourse == course;
+                return ChoiceChip(
+                  label: SizedBox(
+                    width: 160,
+                    child: Text(
+                      course,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  selected: selected,
+                  onSelected: (_) => loadByCourse(course),
+                );
+              },
+            ),
+          ),
+          if (courses.length > 3)
+            TextButton(
+              onPressed: () => setState(() => showAllCourses = !showAllCourses),
+              child: Text(showAllCourses ? "Show less" : "Show more"),
+            ),
+        ],
+      ),
+    );
+  }
 
-            // ================= RECOMMENDATIONS =================
-            if (recommendations.isNotEmpty) ...[
-              const Text(
-                "Recommended for you",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+  Widget _buildTopUniversities(List uniList) {
+    final display = showMoreUniversities ? uniList : uniList.take(3).toList();
+    return _sectionCard(
+      title: "Top Ranked Universities",
+      trailingText: "Showing ${display.length} of ${uniList.length}",
+      child: Column(
+        children: [
+          ...display.map((u) => _universityCard(u)).toList(),
+          if (uniList.length > 3)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: () => setState(() => showMoreUniversities = !showMoreUniversities),
+                child: Text(showMoreUniversities ? "Show less" : "Show more"),
               ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 220,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: recommendations.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 12),
-                  itemBuilder: (_, i) {
-                    final rec = recommendations[i];
-                    return SizedBox(
-                      width: 260,
-                      child: Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(rec['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                              Text(rec['program'] ?? ''),
-                              const SizedBox(height: 8),
-                              Text(rec['country'] ?? '', style: const TextStyle(color: Colors.grey)),
-                              const Spacer(),
-                              Text('Score: ${rec['score'] ?? ''}'),
-                              Text('Tuition: ${rec['tuition'] ?? ''}'),
-                            ],
-                          ),
+            )
+        ],
+      ),
+    );
+  }
+
+  Widget _universityCard(dynamic u) {
+    final name = u['name'] ?? 'University';
+    final country = u['country'] ?? '';
+    final city = u['city'] ?? '';
+    final rawWebsite = u['website'] ?? u['web_pages'] ?? '';
+    final website = rawWebsite is List ? (rawWebsite.isNotEmpty ? rawWebsite.first : '') : rawWebsite;
+    final logo = u['logo_url'] ?? u['logoUrl'];
+    final id = u['id']?.toString() ?? u['_id']?.toString() ?? name;
+    final isSaved = savedIds.contains(id);
+
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: Colors.blue.shade50,
+                  backgroundImage: logo != null ? NetworkImage(logo) : null,
+                  child: logo == null
+                      ? const Icon(Icons.school, color: Color(0xFF0B6FAB))
+                      : null,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
                         ),
+                      ),
+                      Text(
+                        [country, city].where((e) => (e ?? '').toString().isNotEmpty).join(" • "),
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(isSaved ? Icons.bookmark : Icons.bookmark_border, color: Colors.blue),
+                  onPressed: () => toggleSave(id),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                OutlinedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => UniversityDetailPage(university: u),
                       ),
                     );
                   },
+                  child: const Text("View Detail"),
                 ),
-              ),
-            ],
-
-            const SizedBox(height: 16),
-
-            if (deadlines.isNotEmpty) ...[
-              const Text(
-                "Upcoming deadlines",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              ...deadlines.map((d) => ListTile(
-                    leading: const Icon(Icons.event),
-                    title: Text(d['title'] ?? ''),
-                    subtitle: Text(d['date'] ?? ''),
-                  )),
-            ],
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0B6FAB),
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () => toggleSave(id),
+                  child: Text(isSaved ? "Saved" : "Save"),
+                ),
+                const Spacer(),
+                if (website.toString().isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.open_in_new),
+                    onPressed: () => launchUrl(Uri.parse(website.toString())),
+                  ),
+              ],
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDeadlines() {
+    if (deadlines.isEmpty) return const SizedBox.shrink();
+    return _sectionCard(
+      title: "Upcoming deadlines",
+      trailingText: "${deadlines.length} total",
+      child: Column(
+        children: deadlines.take(3).map((d) {
+          return ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.event, color: Color(0xFF0B6FAB)),
+            title: Text(d['title'] ?? ''),
+            subtitle: Text(d['date'] ?? ''),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _sectionCard({required String title, String? trailingText, required Widget child}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              if (trailingText != null)
+                Text(
+                  trailingText,
+                  style: const TextStyle(color: Colors.grey),
+                )
+            ],
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
       ),
     );
   }
