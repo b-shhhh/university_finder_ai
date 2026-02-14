@@ -411,7 +411,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               itemBuilder: (_, i) {
                 final code = display[i];
                 return GestureDetector(
-                  onTap: () => loadUniversities(code),
+                  onTap: () => _openCountryCourses(code),
                   child: Container(
                     width: 120,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -484,7 +484,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                   selected: selected,
-                  onSelected: (_) => loadByCourse(course),
+                  onSelected: (_) => _openCourseCountries(course),
                 );
               },
             ),
