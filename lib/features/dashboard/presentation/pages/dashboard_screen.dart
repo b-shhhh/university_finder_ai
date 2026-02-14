@@ -31,8 +31,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List deadlines = [];
   Set<String> savedIds = {};
   bool loading = true;
-  bool showAllCountries = false;
-  bool showAllCourses = false;
   bool showMoreUniversities = false;
   bool usedCsvFallback = false;
   List<String> courseCountries = [];
@@ -51,7 +49,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> loadData() async {
     try {
-      final c = await ApiClient.I.get(ApiEndpoints.universities + "/countries");
+      final c = await ApiClient.I.get("${ApiEndpoints.universities}/countries");
       final u = await ApiClient.I.get(ApiEndpoints.universities);
       final coursesRes = await ApiClient.I.get(ApiEndpoints.universityCourses);
       final recRes = await ApiClient.I.get(ApiEndpoints.recommendations);
@@ -188,6 +186,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
       setState(() {});
     } catch (e) {
+      if (!mounted) return;
       // Fall back to local toggle for CSV mode
       if (usedCsvFallback) {
         if (isSaved) {
@@ -396,7 +395,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final source = selectedCourse != null && courseCountries.isNotEmpty
         ? courseCountries
         : countries;
-    final display = showAllCountries ? source : source.take(3).toList();
+    final display = source;
     return _sectionCard(
       title: "Countries",
       trailingText:
@@ -455,18 +454,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
               },
             ),
           ),
-          if (countries.length > 3)
-            TextButton(
-              onPressed: () => setState(() => showAllCountries = !showAllCountries),
-              child: Text(showAllCountries ? "Show less" : "Show more"),
-            ),
         ],
       ),
     );
   }
 
   Widget _buildCourses() {
-    final display = showAllCourses ? courses : courses.take(3).toList();
+    final display = courses;
     return _sectionCard(
       title: "Courses",
       trailingText: "${courses.length} total",
@@ -495,11 +489,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               },
             ),
           ),
-          if (courses.length > 3)
-            TextButton(
-              onPressed: () => setState(() => showAllCourses = !showAllCourses),
-              child: Text(showAllCourses ? "Show less" : "Show more"),
-            ),
         ],
       ),
     );
@@ -691,7 +680,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _countryFlag(String codeOrName) {
     final iso = _isoForCountry(codeOrName);
     if (iso != null && iso.length == 2) {
-      return CountryFlags.flag(
+      return CountryFlag.fromCountryCode(
         iso,
         width: 32,
         height: 24,
