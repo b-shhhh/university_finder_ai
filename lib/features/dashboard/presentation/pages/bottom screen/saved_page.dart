@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../../core/api/api_client.dart';
 import '../../../../../core/api/api_endpoints.dart';
-import '../university_detail_page.dart';
+import '../../widgets/university_detail_page.dart';
 
 class SavedPage extends StatefulWidget {
   const SavedPage({super.key});

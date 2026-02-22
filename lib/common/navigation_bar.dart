@@ -17,7 +17,6 @@ class MyNavigationBar extends StatelessWidget {
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
         BottomNavigationBarItem(icon: Icon(Icons.bookmark), label: 'Saved'),
-        BottomNavigationBarItem(icon: Icon(Icons.assignment_turned_in), label: 'Apply'),
         BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
       ],
     );
