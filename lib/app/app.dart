@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../features/auth/presentation/pages/login_screen.dart';
 import '../features/auth/presentation/pages/register_screen.dart';
 import '../features/dashboard/presentation/pages/dashboard_screen.dart';
+import '../features/dashboard/presentation/pages/bottom screen/bottom_nav_shell.dart';
 import '../features/onboarding/presentation/page/onboarding_screen.dart';
 import '../features/splash/presentation/page/splash_screen.dart';
 import '../features/auth/presentation/pages/forgot_password.dart';
@@ -26,7 +27,7 @@ class MyApp extends StatelessWidget {
         '/onboarding': (_) => OnboardingScreen(), // remove const if constructor not const
         '/login': (_) => LoginScreen(),
         '/register': (_) => RegisterScreen(),
-        '/dashboard': (_) => DashboardScreen(),
+        '/dashboard': (_) => const BottomNavShell(),
         '/forgot-password': (_) => const ForgotPasswordScreen(),
         '/reset-password': (_) => const ResetPasswordScreen(),
       },
