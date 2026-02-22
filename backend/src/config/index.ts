@@ -8,14 +8,20 @@ const parsePort = (value: string | undefined, fallback: number) => {
 };
 
 const parseOrigins = (value: string | undefined) => {
-  if (!value) {
-    return ["http://localhost:3000", "http://localhost:3003"];
-  }
+  const defaults = [
+    "http://localhost:3000",
+    "http://localhost:3003",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3003"
+  ];
+
+  if (!value) return defaults;
 
   return value
     .split(",")
     .map((item) => item.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .concat(defaults);
 };
 
 export const NODE_ENV = process.env.NODE_ENV || "development";

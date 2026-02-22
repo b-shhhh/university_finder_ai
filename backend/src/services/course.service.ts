@@ -34,3 +34,19 @@ export const getCourseById = async (id: string) => {
   if (!course) throw new Error("Course not found");
   return course;
 };
+
+// Get countries offering a specific course
+export const getCountriesForCourse = async (course: string) => {
+  const needle = normalize(course);
+  const rows = await University.find({}).select("country courses").lean();
+  const countries = Array.from(
+    new Set(
+      rows
+        .filter((row) => Array.isArray(row.courses) && row.courses.some((c) => normalize(c) === needle))
+        .map((row) => String(row.country || "").trim())
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
+  if (!countries.length) throw new Error("Course not found in any country");
+  return countries;
+};

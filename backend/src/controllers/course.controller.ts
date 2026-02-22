@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getAllCourses, getCoursesByCountry, getCourseById } from "../services/course.service";
+import { getAllCourses, getCoursesByCountry, getCourseById, getCountriesForCourse } from "../services/course.service";
 
 // List all courses
 export const listCourses = async (req: Request, res: Response) => {
@@ -28,6 +28,17 @@ export const courseDetails = async (req: Request, res: Response) => {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const course = await getCourseById(id);
     res.status(200).json({ success: true, data: course });
+  } catch (error: any) {
+    res.status(404).json({ success: false, message: error.message });
+  }
+};
+
+// List countries that offer a course
+export const countriesByCourse = async (req: Request, res: Response) => {
+  try {
+    const course = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const countries = await getCountriesForCourse(course);
+    res.status(200).json({ success: true, data: countries });
   } catch (error: any) {
     res.status(404).json({ success: false, message: error.message });
   }

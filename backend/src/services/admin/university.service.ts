@@ -16,7 +16,14 @@ export const listAdminUniversitiesService = async (query: {
 
   const searchRegex = buildSearchRegex(query.search);
   if (searchRegex) {
-    filter.$or = [{ name: searchRegex }, { country: searchRegex }, { courses: searchRegex }];
+    filter.$or = [
+      { name: searchRegex },
+      { country: searchRegex },
+      { state: searchRegex },
+      { city: searchRegex },
+      { courses: searchRegex },
+      { courseCategories: searchRegex },
+    ];
   }
 
   const [items, total] = await Promise.all([

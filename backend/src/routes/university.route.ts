@@ -5,7 +5,8 @@ import {
   getUniversities,
   getUniversityDetail,
   getCourses,
-  getCoursesByCountry
+  getCoursesByCountry,
+  getUniversitiesByIds
 } from "../controllers/university.controller";
 
 const router = Router();
@@ -21,6 +22,9 @@ router.get("/country/:country", getUniversities);
 // Courses
 router.get("/courses", getCourses);
 router.get("/courses/:course", getCoursesByCountry);
+
+// Batch details by ids (comma-separated via ?ids=)
+router.get("/details/by-ids", getUniversitiesByIds);
 
 // University details
 router.get("/:universityId", getUniversityDetail);

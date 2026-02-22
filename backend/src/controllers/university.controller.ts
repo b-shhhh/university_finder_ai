@@ -4,7 +4,8 @@ import {
   getCountriesService,
   getUniversitiesService,
   getUniversityDetailService,
-  getCoursesService
+  getCoursesService,
+  getUniversitiesByIdsService
 } from "../services/university.service";
 
 export const getAllUniversities = async (_req: Request, res: Response) => {
@@ -63,6 +64,21 @@ export const getCoursesByCountry = async (req: Request, res: Response) => {
   try {
     const course = Array.isArray(req.params.course) ? req.params.course[0] : req.params.course;
     const data = await getCoursesService(course);
+    res.status(200).json({ success: true, data });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Get multiple universities by ids
+export const getUniversitiesByIds = async (req: Request, res: Response) => {
+  try {
+    const idsParam = Array.isArray(req.query.ids) ? req.query.ids.join(",") : (req.query.ids as string | undefined);
+    if (!idsParam) {
+      return res.status(400).json({ success: false, message: "ids query param required" });
+    }
+    const ids = idsParam.split(",").map((id) => id.trim()).filter(Boolean);
+    const data = await getUniversitiesByIdsService(ids);
     res.status(200).json({ success: true, data });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });

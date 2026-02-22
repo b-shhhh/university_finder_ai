@@ -6,11 +6,18 @@ type UniversityApiItem = {
   dbId: string;
   alpha2: string;
   country: string;
+  state?: string;
+  city?: string;
   name: string;
   web_pages?: string;
   flag_url?: string;
   logo_url?: string;
   courses: string[];
+  courseCategories?: string[];
+  degreeLevels?: string[];
+  ieltsMin?: number | null;
+  satRequired?: boolean;
+  satMin?: number | null;
   description?: string;
 };
 
@@ -21,11 +28,22 @@ const mapUniversity = (uni: any): UniversityApiItem => ({
   dbId: String(uni._id),
   alpha2: String(uni.alpha2 || "").toUpperCase(),
   country: String(uni.country || ""),
+  state: uni.state || undefined,
+  city: uni.city || undefined,
   name: String(uni.name || ""),
   web_pages: uni.web_pages || undefined,
   flag_url: uni.flag_url || undefined,
   logo_url: uni.logo_url || undefined,
   courses: Array.isArray(uni.courses) ? uni.courses.map((course: unknown) => String(course)).filter(Boolean) : [],
+  courseCategories: Array.isArray(uni.courseCategories)
+    ? uni.courseCategories.map((item: unknown) => String(item)).filter(Boolean)
+    : undefined,
+  degreeLevels: Array.isArray(uni.degreeLevels)
+    ? uni.degreeLevels.map((item: unknown) => String(item)).filter(Boolean)
+    : undefined,
+  ieltsMin: typeof uni.ieltsMin === "number" ? uni.ieltsMin : null,
+  satRequired: typeof uni.satRequired === "boolean" ? uni.satRequired : undefined,
+  satMin: typeof uni.satMin === "number" ? uni.satMin : null,
   description: uni.description || undefined,
 });
 
@@ -66,6 +84,22 @@ export const getUniversityDetailService = async (universityId: string) => {
   const uni = await University.findOne({ $or: detailLookup }).lean();
   if (!uni) throw new Error("University not found");
   return mapUniversity(uni);
+};
+
+/**
+ * Get multiple university details by comma-separated ids
+ */
+export const getUniversitiesByIdsService = async (ids: string[]) => {
+  const lookups: Array<Record<string, unknown>> = [];
+  const sourceIds = ids.filter((id) => !mongoose.Types.ObjectId.isValid(id));
+  const objectIds = ids.filter((id) => mongoose.Types.ObjectId.isValid(id));
+
+  if (sourceIds.length) lookups.push({ sourceId: { $in: sourceIds } });
+  if (objectIds.length) lookups.push({ _id: { $in: objectIds } });
+
+  if (!lookups.length) return [];
+  const universities = await University.find({ $or: lookups }).lean();
+  return universities.map(mapUniversity);
 };
 
 /**

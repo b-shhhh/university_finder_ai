@@ -1,0 +1,7 @@
+name,country,city,courses,website,logo_url,flag_url
+Massachusetts Institute of Technology,United States,Cambridge,Computer Science;Engineering;Physics,https://web.mit.edu,https://upload.wikimedia.org/wikipedia/commons/0/0c/MIT_logo.svg,https://flagcdn.com/us.svg
+Stanford University,United States,Stanford,Computer Science;Business;Design,https://www.stanford.edu,https://upload.wikimedia.org/wikipedia/en/b/b7/Stanford_University_seal_2003.svg,https://flagcdn.com/us.svg
+University of Oxford,United Kingdom,Oxford,Humanities;Law;Medicine,https://www.ox.ac.uk,https://upload.wikimedia.org/wikipedia/en/f/fa/Oxford-University-Circlet.svg,https://flagcdn.com/gb.svg
+University of Toronto,Canada,Toronto,Computer Science;Medicine;Business,https://www.utoronto.ca,https://upload.wikimedia.org/wikipedia/en/0/0e/Utoronto_coa.svg,https://flagcdn.com/ca.svg
+National University of Singapore,Singapore,Singapore,Engineering;Business;Computer Science,https://www.nus.edu.sg,https://upload.wikimedia.org/wikipedia/en/e/eb/NationalUniversityOfSingapore.svg,https://flagcdn.com/sg.svg
+University of Melbourne,Australia,Melbourne,Biology;Medicine;Economics,https://www.unimelb.edu.au,https://upload.wikimedia.org/wikipedia/en/8/8c/University_of_Melbourne_coat_of_arms.svg,https://flagcdn.com/au.svg
