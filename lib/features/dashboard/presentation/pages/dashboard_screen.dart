@@ -260,7 +260,8 @@ String? _flagForCountry(List<Map<String, dynamic>> universities, String country)
 
   final alpha2 = match['alpha2'] ?? match['alpha_2'] ?? match['iso2'];
   if (alpha2 == null || alpha2.toString().isEmpty) return null;
-  return 'https://flagcdn.com/${alpha2.toString().toLowerCase()}.svg';
+  // Use PNG to avoid SVG rendering issues in Image.network.
+  return 'https://flagcdn.com/w40/${alpha2.toString().toLowerCase()}.png';
 }
 
 String? _logoFor(Map<String, dynamic> uni) {
