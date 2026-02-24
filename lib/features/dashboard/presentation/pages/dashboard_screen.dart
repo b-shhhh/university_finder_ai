@@ -1,5 +1,6 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../../core/api/api_client.dart';
 import '../../../../core/api/api_endpoints.dart';
@@ -7,6 +8,7 @@ import '../../data/datasources/local/university_csv_loader.dart';
 import '../widgets/university_detail_page.dart';
 import '../widgets/country_widget.dart';
 import '../widgets/course_widget.dart';
+import 'package:Uniguide/common/navigation_bar.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -18,6 +20,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   bool loading = true;
   String search = '';
+  int _navIndex = 0;
 
   List<Map<String, dynamic>> universities = [];
   List<String> courses = [];
@@ -129,6 +132,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
+      bottomNavigationBar: MyNavigationBar(
+        currentIndex: _navIndex,
+        onTap: (i) => setState(() => _navIndex = i),
+      ),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -260,7 +267,6 @@ String? _flagForCountry(List<Map<String, dynamic>> universities, String country)
 
   final alpha2 = match['alpha2'] ?? match['alpha_2'] ?? match['iso2'];
   if (alpha2 == null || alpha2.toString().isEmpty) return null;
-  // Use PNG to avoid SVG rendering issues in Image.network.
   return 'https://flagcdn.com/w40/${alpha2.toString().toLowerCase()}.png';
 }
 
@@ -449,15 +455,44 @@ class _UniversitiesGrid extends StatelessWidget {
             ),
             itemBuilder: (_, i) {
               final u = universities[i];
+              final logo = _logoFor(u);
+              final avatar = logo != null && logo.isNotEmpty
+                  ? (logo.toLowerCase().endsWith('.svg')
+                      ? CircleAvatar(
+                          backgroundColor: const Color(0xFFE2E8F0),
+                          child: ClipOval(
+                            child: SvgPicture.network(
+                              logo,
+                              width: 36,
+                              height: 36,
+                              fit: BoxFit.cover,
+                              placeholderBuilder: (_) =>
+                                  const Icon(Icons.school, color: Colors.grey),
+                            ),
+                          ),
+                        )
+                      : CircleAvatar(
+                          backgroundColor: const Color(0xFFE2E8F0),
+                          backgroundImage: NetworkImage(logo),
+                          onBackgroundImageError: (_, __) {},
+                        ))
+                  : (_flagForCountry([u], u['country']?.toString() ?? '') != null
+                      ? CircleAvatar(
+                          backgroundColor: const Color(0xFFE2E8F0),
+                          backgroundImage:
+                              NetworkImage(_flagForCountry([u], u['country']?.toString() ?? '')!),
+                          onBackgroundImageError: (_, __) {},
+                        )
+                      : const CircleAvatar(child: Icon(Icons.school)));
               return GestureDetector(
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => UniversityDetailPage(university: u)),
+                  MaterialPageRoute(
+                    builder: (_) => UniversityDetailPage(university: u),
+                  ),
                 ),
                 child: _SimpleCard(
-                  leading: _logoFor(u) != null
-                      ? CircleAvatar(backgroundImage: NetworkImage(_logoFor(u)!))
-                      : const CircleAvatar(child: Icon(Icons.school)),
+                  leading: avatar,
                   title: u['name']?.toString() ?? '',
                   subtitle: u['country']?.toString() ?? '',
                 ),

@@ -50,9 +50,13 @@ class CountryCard extends StatelessWidget {
       ),
     );
 
-    if (onTap != null) {
-      return InkWell(onTap: onTap, child: card);
-    }
-    return card;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: card,
+      ),
+    );
   }
 }

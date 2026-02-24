@@ -6,12 +6,16 @@ class CourseCard extends StatelessWidget {
     super.key,
     required this.name,
     required this.universityCount,
+    this.countries = const [],
     this.onTap,
+    this.onCountryTap,
   });
 
   final String name;
   final int universityCount;
+  final List<String> countries;
   final VoidCallback? onTap;
+  final void Function(String country)? onCountryTap;
 
   @override
   Widget build(BuildContext context) {
@@ -44,9 +48,49 @@ class CourseCard extends StatelessWidget {
       ),
     );
 
-    if (onTap != null) {
-      return InkWell(onTap: onTap, child: card);
-    }
-    return card;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap ?? () => _showCountries(context),
+        child: card,
+      ),
+    );
+  }
+
+  void _showCountries(BuildContext context) {
+    if (countries.isEmpty) return;
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              ...countries
+                  .map(
+                    (c) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(c),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.pop(context);
+                        onCountryTap?.call(c);
+                      },
+                    ),
+                  )
+                  .toList(),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
