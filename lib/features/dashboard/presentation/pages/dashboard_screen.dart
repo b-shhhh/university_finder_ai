@@ -5,6 +5,8 @@ import '../../../../core/api/api_client.dart';
 import '../../../../core/api/api_endpoints.dart';
 import '../../data/datasources/local/university_csv_loader.dart';
 import '../widgets/university_detail_page.dart';
+import '../widgets/country_widget.dart';
+import '../widgets/course_widget.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -173,9 +175,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               itemHeight: 156,
                               children: countryCounts
                                   .map(
-                                    (c) => _CountryCard(
+                                    (c) => CountryCard(
                                       name: c.key,
-                                      count: c.value,
+                                      universityCount: c.value,
                                       flagUrl: _flagForCountry(universities, c.key),
                                     ),
                                   )
@@ -187,7 +189,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               subtitle: '${courseCounts.length} total',
                               itemHeight: 140,
                               children: courseCounts
-                                  .map((c) => _CourseCard(name: c.key, uniCount: c.value))
+                                  .map((c) => CourseCard(name: c.key, universityCount: c.value))
                                   .toList(),
                             ),
                             const SizedBox(height: 16),
@@ -403,40 +405,6 @@ class _HorizontalSection extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _CountryCard extends StatelessWidget {
-  const _CountryCard({required this.name, required this.count, this.flagUrl});
-
-  final String name;
-  final int count;
-  final String? flagUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    return _SimpleCard(
-      leading: flagUrl != null
-          ? CircleAvatar(backgroundImage: NetworkImage(flagUrl!))
-          : const CircleAvatar(child: Icon(Icons.flag)),
-      title: name,
-      subtitle: '$count universities',
-    );
-  }
-}
-
-class _CourseCard extends StatelessWidget {
-  const _CourseCard({required this.name, required this.uniCount});
-
-  final String name;
-  final int uniCount;
-
-  @override
-  Widget build(BuildContext context) {
-    return _SimpleCard(
-      title: name,
-      subtitle: '$uniCount universities',
     );
   }
 }
