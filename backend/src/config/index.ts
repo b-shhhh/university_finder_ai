@@ -12,7 +12,8 @@ const parseOrigins = (value: string | undefined) => {
     "http://localhost:3000",
     "http://localhost:3003",
     "http://127.0.0.1:3000",
-    "http://127.0.0.1:3003"
+    "http://127.0.0.1:3003",
+    "http://192.168.1.128:46221"
   ];
 
   if (!value) return defaults;

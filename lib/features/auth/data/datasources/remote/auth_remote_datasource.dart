@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'dart:io' show SocketException;
 import '../../models/auth_api_model.dart';
 import '../../models/user_api_model.dart';
 import '../../../../../core/api/api_client.dart';
@@ -41,8 +42,31 @@ class AuthRemoteDataSource {
   }
 
   String _extractMessage(DioException e) {
+    // Try to extract error message from response body first
     final data = e.response?.data;
-    if (data is Map && data['message'] is String) return data['message'] as String;
-    return e.message ?? 'Network error';
+    if (data is Map && data['message'] is String) {
+      return data['message'] as String;
+    }
+    
+    // Fallback to Dio error message
+    if (e.message != null && e.message!.isNotEmpty) {
+      return e.message!;
+    }
+    
+    // Fall back to exception type name
+    if (e.type == DioExceptionType.connectionTimeout) {
+      return 'Connection timeout - unable to reach the server';
+    } else if (e.type == DioExceptionType.receiveTimeout) {
+      return 'Response timeout - server took too long to respond';
+    } else if (e.type == DioExceptionType.sendTimeout) {
+      return 'Send timeout - could not send request to server';
+    } else if (e.type == DioExceptionType.unknown) {
+      if (e.error is SocketException) {
+        return 'Network error - ${(e.error as SocketException).osError?.message}. Please check if the server is running at ${e.requestOptions.uri}.';
+      }
+      return 'Network error - please check your internet connection and server URL';
+    }
+    
+    return 'Network error';
   }
 }

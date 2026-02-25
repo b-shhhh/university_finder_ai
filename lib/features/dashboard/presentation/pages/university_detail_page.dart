@@ -20,7 +20,7 @@ class UniversityDetailPage extends StatelessWidget {
     final name = university['name'] ?? 'Unknown University';
     final country = university['country'] ?? '';
     final city = university['city'] ?? '';
-    final website = university['website_url'];
+    final website = _websiteOf(university);
     final description = university['description'] ?? '';
     final courses = _coursesOf(university);
 
@@ -199,6 +199,7 @@ class UniversityDetailPage extends StatelessWidget {
       'address',
       'phone',
       'email',
+      'website',
     ];
 
     final infoWidgets = <Widget>[];
@@ -207,32 +208,68 @@ class UniversityDetailPage extends StatelessWidget {
       final value = data[field];
       if (value != null && value.toString().isNotEmpty) {
         final displayName = _getDisplayName(field);
-        infoWidgets.add(
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: 120,
-                  child: Text(
-                    '$displayName:',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w500,
-                      color: Colors.grey,
+        if (field == 'website') {
+          infoWidgets.add(
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 120,
+                    child: Text(
+                      '$displayName:',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey,
+                      ),
                     ),
                   ),
-                ),
-                Expanded(
-                  child: Text(
-                    value.toString(),
-                    style: const TextStyle(fontSize: 16),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => _launchUrl(value.toString()),
+                      child: Text(
+                        value.toString(),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.blue,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
+          );
+        } else {
+          infoWidgets.add(
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 120,
+                    child: Text(
+                      '$displayName:',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      value.toString(),
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
       }
     }
 
@@ -270,6 +307,8 @@ class UniversityDetailPage extends StatelessWidget {
         return 'Phone';
       case 'email':
         return 'Email';
+      case 'website':
+        return 'Website';
       default:
         return field.replaceAll('_', ' ').toUpperCase();
     }
@@ -283,6 +322,18 @@ class UniversityDetailPage extends StatelessWidget {
       return courses.split(',').map((c) => c.trim()).where((c) => c.isNotEmpty).toList();
     }
     return [];
+  }
+
+  String? _websiteOf(Map<String, dynamic> uni) {
+    final raw = uni['website_url'] ??
+        uni['website'] ??
+        uni['websiteUrl'] ??
+        uni['web_pages'] ??
+        uni['webPages'];
+
+    if (raw is List && raw.isNotEmpty) return raw.first.toString().trim();
+    if (raw is String) return raw.trim();
+    return null;
   }
 
   Future<void> _launchUrl(String url) async {
