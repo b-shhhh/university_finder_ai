@@ -4,11 +4,12 @@ import 'package:flutter/material.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../../core/api/api_endpoints.dart';
 import '../../data/datasources/local/university_csv_loader.dart';
+import 'package:Uniguide/common/navigation_bar.dart';
 import '../widgets/country_widget.dart';
 import '../widgets/course_widget.dart';
 import '../widgets/university_widget.dart';
+import '../widgets/dashboard_chatbot.dart';
 import 'university_detail_page.dart';
-import 'package:Uniguide/common/navigation_bar.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -304,6 +305,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
+      floatingActionButton: FloatingActionButton(
+        heroTag: 'chatbot-fab',
+        elevation: 8,
+        backgroundColor: Colors.transparent,
+        onPressed: _openChatbotSheet,
+        child: Container(
+          width: 56,
+          height: 56,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              colors: [Color(0xFF4F46E5), Color(0xFF6366F1)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x334F46E5),
+                blurRadius: 12,
+                offset: Offset(0, 6),
+              ),
+            ],
+          ),
+          child: const Icon(Icons.school, color: Colors.white, size: 28),
+        ),
+      ),
       bottomNavigationBar: MyNavigationBar(
         currentIndex: _navIndex,
       ),
@@ -311,7 +338,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isWide = constraints.maxWidth >= 1100;
-            final chatbot = _ChatbotPanel(universities: universities);
 
             final scroll = RefreshIndicator(
               onRefresh: _load,
@@ -461,7 +487,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               onSave: _toggleSave,
                             ),
                             const SizedBox(height: 16),
-                            if (!isWide) chatbot,
                           ],
                         ],
                       ),
@@ -471,25 +496,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             );
 
-            if (!isWide) return scroll;
-
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: scroll),
-                SizedBox(
-                  width: 360,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 16, 16, 16),
-                    child: SingleChildScrollView(child: chatbot),
-                  ),
-                ),
-              ],
-            );
+            return scroll;
           },
         ),
       ),
     );
+  }
+
+  void _openChatbotSheet() {
+    showDashboardChatbot(context, universities);
   }
 }
 
@@ -671,56 +686,6 @@ class _UniversitiesGrid extends StatelessWidget {
   }
 }
 
-class _ChatbotPanel extends StatelessWidget {
-  const _ChatbotPanel({required this.universities});
-
-  final List<Map<String, dynamic>> universities;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'AI University Finder',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Ask me about universities, courses, or countries!',
-            style: TextStyle(color: Colors.black54, fontSize: 14),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            decoration: InputDecoration(
-              hintText: 'e.g., "Computer Science in Germany"',
-              filled: true,
-              fillColor: const Color(0xFFF8FAFC),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-            ),
-            onSubmitted: (query) {
-              // TODO: Implement AI search
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Searching for: $query')),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 String? _flagForCountry(List<Map<String, dynamic>> universities, String country) {
   for (final u in universities) {
