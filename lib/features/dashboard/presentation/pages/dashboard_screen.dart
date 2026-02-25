@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:developer' as dev;
+import 'dart:math' as math;
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:sensors_plus/sensors_plus.dart';
@@ -26,6 +28,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _navIndex = 0;
   StreamSubscription<AccelerometerEvent>? _accelSub;
   String accelText = '';
+  bool accelAvailable = false;
+  Timer? _accelTimeout;
+  DateTime? _lastShake;
+  static const int _shakeCooldownMs = 1500;
+  static const double _shakeThreshold = 15; // m/s^2 magnitude
 
   List<Map<String, dynamic>> universities = [];
   List<String> courses = [];
@@ -42,7 +49,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       setState(() {
         accelText =
             '${e.x.toStringAsFixed(1)}, ${e.y.toStringAsFixed(1)}, ${e.z.toStringAsFixed(1)}';
+        accelAvailable = true;
       });
+      dev.log('Accel event: $accelText', name: 'sensors');
+      _checkShake(e);
+    });
+    // mark unavailable if no event arrives within 3 seconds
+    _accelTimeout = Timer(const Duration(seconds: 3), () {
+      if (!accelAvailable && mounted) {
+        setState(() => accelText = 'unavailable');
+      }
     });
   }
 
@@ -517,7 +533,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Align(
                 alignment: Alignment.bottomRight,
                 child: Chip(
-                  label: Text('Accel $accelText', style: const TextStyle(fontSize: 12)),
+                  label: Text(
+                    accelText == 'unavailable' ? 'Accel unavailable' : 'Accel $accelText',
+                    style: const TextStyle(fontSize: 12),
+                  ),
                   backgroundColor: const Color(0xFFEFF6FF),
                   side: const BorderSide(color: Color(0xFFBFDBFE)),
                 ),
@@ -533,7 +552,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void dispose() {
     _accelSub?.cancel();
+    _accelTimeout?.cancel();
     super.dispose();
+  }
+
+  void _checkShake(AccelerometerEvent e) {
+    final magnitude = math.sqrt(e.x * e.x + e.y * e.y + e.z * e.z);
+    final now = DateTime.now();
+    if (magnitude > _shakeThreshold &&
+        (_lastShake == null ||
+            now.difference(_lastShake!).inMilliseconds > _shakeCooldownMs)) {
+      _lastShake = now;
+      _triggerShakeRefresh();
+    }
+  }
+
+  void _triggerShakeRefresh() {
+    if (loading) return;
+    _load();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Shake detected — refreshing universities...')),
+    );
   }
 }
 
