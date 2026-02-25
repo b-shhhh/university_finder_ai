@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
-/// Shows the chatbot bottom sheet with the given universities list.
-void showDashboardChatbot(BuildContext context, List<Map<String, dynamic>> universities) {
+/// Frontend-only chatbot: filters in-memory universities list and shows results.
+void showDashboardChatbot(
+  BuildContext context,
+  List<Map<String, dynamic>> universities,
+) {
   showModalBottomSheet(
     context: context,
     shape: const RoundedRectangleBorder(
@@ -16,7 +19,10 @@ void showDashboardChatbot(BuildContext context, List<Map<String, dynamic>> unive
       builder: (_, controller) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: _ChatbotPanel(universities: universities),
+          child: _ChatbotPanel(
+            universities: universities,
+            scrollController: controller,
+          ),
         ),
       ),
     ),
@@ -24,9 +30,13 @@ void showDashboardChatbot(BuildContext context, List<Map<String, dynamic>> unive
 }
 
 class _ChatbotPanel extends StatefulWidget {
-  const _ChatbotPanel({required this.universities});
+  const _ChatbotPanel({
+    required this.universities,
+    required this.scrollController,
+  });
 
   final List<Map<String, dynamic>> universities;
+  final ScrollController scrollController;
 
   @override
   State<_ChatbotPanel> createState() => _ChatbotPanelState();
@@ -34,25 +44,38 @@ class _ChatbotPanel extends StatefulWidget {
 
 class _ChatbotPanelState extends State<_ChatbotPanel> {
   final _inputCtrl = TextEditingController();
-  final _scrollCtrl = ScrollController();
-  List<String> _results = [];
+  final List<_Message> _messages = [
+    const _Message(
+      sender: Sender.bot,
+      text:
+          'Try: “Universities in Canada that accept IELTS 6.5” or “MBA in Germany with SAT optional”.',
+    ),
+  ];
 
   @override
   void dispose() {
     _inputCtrl.dispose();
-    _scrollCtrl.dispose();
     super.dispose();
   }
 
-  void _search() {
-    final q = _inputCtrl.text.trim();
-    if (q.isEmpty) return;
-    final list = _searchUniversities(q);
-    setState(() => _results = list);
+  void _send() {
+    final text = _inputCtrl.text.trim();
+    if (text.isEmpty) return;
+    setState(() => _messages.add(_Message(sender: Sender.user, text: text)));
+    _inputCtrl.clear();
+    _respond(text);
+  }
+
+  void _respond(String query) {
+    final results = _searchUniversities(query);
+    final reply = results.isEmpty
+        ? 'No matches for “$query”. Try another country or course.'
+        : 'Here are some universities I found:\n${results.join('\n')}';
+    setState(() => _messages.add(_Message(sender: Sender.bot, text: reply)));
     Future.delayed(const Duration(milliseconds: 50), () {
-      if (_scrollCtrl.hasClients) {
-        _scrollCtrl.animateTo(
-          0,
+      if (widget.scrollController.hasClients) {
+        widget.scrollController.animateTo(
+          widget.scrollController.position.maxScrollExtent,
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
         );
@@ -96,9 +119,7 @@ class _ChatbotPanelState extends State<_ChatbotPanel> {
         ],
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          // Header
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: const BoxDecoration(
@@ -132,95 +153,79 @@ class _ChatbotPanelState extends State<_ChatbotPanel> {
               ],
             ),
           ),
-
-          // Body
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: _inputCtrl,
-                  decoration: InputDecoration(
-                    hintText: 'law',
-                    filled: true,
-                    fillColor: const Color(0xFFF8FAFC),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                  onSubmitted: (_) => _search(),
-                ),
-                const SizedBox(height: 12),
-                if (_results.isEmpty)
-                  const Text(
-                    'Try: "Universities in Canada that accept IELTS 6.5" or "MBA in Germany with SAT optional".',
-                    style: TextStyle(color: Colors.black54, fontSize: 13),
-                  )
-                else
-                  Container(
-                    constraints: const BoxConstraints(maxHeight: 320),
+          Expanded(
+            child: ListView.builder(
+              controller: widget.scrollController,
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              itemCount: _messages.length,
+              itemBuilder: (_, i) {
+                final m = _messages[i];
+                final isUser = m.sender == Sender.user;
+                return Align(
+                  alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 6),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
+                      color: isUser ? const Color(0xFF2563EB) : Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      border: isUser ? null : Border.all(color: const Color(0xFFE2E8F0)),
+                      boxShadow: isUser
+                          ? null
+                          : [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              )
+                            ],
                     ),
-                    child: Scrollbar(
-                      thumbVisibility: true,
-                      controller: _scrollCtrl,
-                      child: ListView.builder(
-                        controller: _scrollCtrl,
-                        shrinkWrap: true,
-                        itemCount: _results.length,
-                        itemBuilder: (_, i) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: Text(
-                            _results[i],
-                            style: const TextStyle(fontSize: 13, height: 1.4),
-                          ),
-                        ),
+                    child: Text(
+                      m.text,
+                      style: TextStyle(
+                        color: isUser ? Colors.white : Colors.black87,
+                        fontSize: 13,
+                        height: 1.35,
                       ),
                     ),
                   ),
-              ],
+                );
+              },
             ),
           ),
-
-          // Footer input + send
           const Divider(height: 1),
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _inputCtrl,
+                    minLines: 1,
+                    maxLines: 3,
                     decoration: InputDecoration(
-                      hintText: 'Ask about country, course, IELTS/SAT...',
+                      hintText: 'Ask about country, course, IELTS/SAT…',
                       filled: true,
                       fillColor: const Color(0xFFF8FAFC),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
                       ),
                     ),
-                    onSubmitted: (_) => _search(),
+                    onSubmitted: (_) => _send(),
                   ),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2563EB),
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  onPressed: _search,
+                  onPressed: _send,
                   child: const Text('Send'),
                 ),
               ],
@@ -230,4 +235,12 @@ class _ChatbotPanelState extends State<_ChatbotPanel> {
       ),
     );
   }
+}
+
+enum Sender { user, bot }
+
+class _Message {
+  final Sender sender;
+  final String text;
+  const _Message({required this.sender, required this.text});
 }
