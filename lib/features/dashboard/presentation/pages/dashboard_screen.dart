@@ -24,6 +24,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool loading = true;
   String search = '';
   int _navIndex = 0;
+  StreamSubscription<AccelerometerEvent>? _accelSub;
+  String accelText = '';
 
   List<Map<String, dynamic>> universities = [];
   List<String> courses = [];
@@ -36,6 +38,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _load();
+    _accelSub = accelerometerEvents.listen((e) {
+      setState(() {
+        accelText =
+            '${e.x.toStringAsFixed(1)}, ${e.y.toStringAsFixed(1)}, ${e.z.toStringAsFixed(1)}';
+      });
+    });
   }
 
   Future<void> _load() async {
@@ -369,12 +377,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           const SizedBox(height: 12),
                           _HeroSection(stats: stats),
                           const SizedBox(height: 16),
-                          if (loading)
-                            const Padding(
-                              padding: EdgeInsets.all(12),
-                              child: Center(child: CircularProgressIndicator()),
-                            )
-                          else ...[
+            if (loading)
+              const Padding(
+                padding: EdgeInsets.all(12),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else ...[
                             _HorizontalSection(
                               title: 'Countries',
                               subtitle: '${countryCounts.length} total',
@@ -502,11 +510,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
           },
         ),
       ),
+      bottomSheet: accelText.isEmpty
+          ? null
+          : Padding(
+              padding: const EdgeInsets.only(bottom: 8, right: 12),
+              child: Align(
+                alignment: Alignment.bottomRight,
+                child: Chip(
+                  label: Text('Accel $accelText', style: const TextStyle(fontSize: 12)),
+                  backgroundColor: const Color(0xFFEFF6FF),
+                  side: const BorderSide(color: Color(0xFFBFDBFE)),
+                ),
+              ),
+            ),
     );
   }
 
   void _openChatbotSheet() {
     showDashboardChatbot(context, universities);
+  }
+
+  @override
+  void dispose() {
+    _accelSub?.cancel();
+    super.dispose();
   }
 }
 
