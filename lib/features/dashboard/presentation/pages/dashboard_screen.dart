@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer' as dev;
 import 'dart:math' as math;
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
@@ -27,9 +26,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String search = '';
   int _navIndex = 0;
   StreamSubscription<AccelerometerEvent>? _accelSub;
-  String accelText = '';
-  bool accelAvailable = false;
-  Timer? _accelTimeout;
   DateTime? _lastShake;
   static const int _shakeCooldownMs = 1500;
   static const double _shakeThreshold = 15; // m/s^2 magnitude
@@ -45,21 +41,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _load();
-    _accelSub = accelerometerEvents.listen((e) {
-      setState(() {
-        accelText =
-            '${e.x.toStringAsFixed(1)}, ${e.y.toStringAsFixed(1)}, ${e.z.toStringAsFixed(1)}';
-        accelAvailable = true;
-      });
-      dev.log('Accel event: $accelText', name: 'sensors');
-      _checkShake(e);
-    });
-    // mark unavailable if no event arrives within 3 seconds
-    _accelTimeout = Timer(const Duration(seconds: 3), () {
-      if (!accelAvailable && mounted) {
-        setState(() => accelText = 'unavailable');
-      }
-    });
+    _accelSub = accelerometerEvents.listen(_checkShake);
   }
 
   Future<void> _load() async {
@@ -526,22 +508,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           },
         ),
       ),
-      bottomSheet: accelText.isEmpty
-          ? null
-          : Padding(
-              padding: const EdgeInsets.only(bottom: 8, right: 12),
-              child: Align(
-                alignment: Alignment.bottomRight,
-                child: Chip(
-                  label: Text(
-                    accelText == 'unavailable' ? 'Accel unavailable' : 'Accel $accelText',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  backgroundColor: const Color(0xFFEFF6FF),
-                  side: const BorderSide(color: Color(0xFFBFDBFE)),
-                ),
-              ),
-            ),
     );
   }
 
@@ -552,7 +518,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void dispose() {
     _accelSub?.cancel();
-    _accelTimeout?.cancel();
     super.dispose();
   }
 
