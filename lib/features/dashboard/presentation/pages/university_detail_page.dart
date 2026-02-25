@@ -91,6 +91,31 @@ class UniversityDetailPage extends StatelessWidget {
                           ),
                         ],
                       ),
+                      if (website != null && website.toString().isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        GestureDetector(
+                          onTap: () => _launchUrl(website.toString()),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.link, size: 16, color: Colors.blue),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  website.toString(),
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.blue,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const Icon(Icons.open_in_new, size: 16, color: Colors.blue),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

@@ -17,24 +17,8 @@ class MyNavigationBar extends StatelessWidget {
           onTap!(i);
           return;
         }
-        // Fallback navigation if no handler is provided.
-        switch (i) {
-          case 0:
-            Navigator.pushReplacementNamed(context, '/dashboard');
-            break;
-          case 1:
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const SavedPage()),
-            );
-            break;
-          case 2:
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const ProfilePage()),
-            );
-            break;
-        }
+        // Handle navigation based on index
+        _handleNavigation(context, i);
       },
       type: BottomNavigationBarType.fixed,
       selectedItemColor: Theme.of(context).primaryColor,
@@ -45,5 +29,26 @@ class MyNavigationBar extends StatelessWidget {
         BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
       ],
     );
+  }
+
+  void _handleNavigation(BuildContext context, int index) {
+    switch (index) {
+      case 0:
+        // Navigate to dashboard/home
+        Navigator.of(context).pushNamedAndRemoveUntil('/dashboard', (route) => false);
+        break;
+      case 1:
+        // Navigate to saved page
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const SavedPage()),
+        );
+        break;
+      case 2:
+        // Navigate to profile page
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const ProfilePage()),
+        );
+        break;
+    }
   }
 }

@@ -289,7 +289,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       backgroundColor: const Color(0xFFF8FAFC),
       bottomNavigationBar: MyNavigationBar(
         currentIndex: _navIndex,
-        onTap: (i) => setState(() => _navIndex = i),
       ),
       body: SafeArea(
         child: LayoutBuilder(
@@ -441,6 +440,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ),
                                 ),
                               ),
+                              savedIds: savedIds,
+                              onSave: _toggleSave,
                             ),
                             const SizedBox(height: 16),
                             if (!isWide) chatbot,
@@ -612,10 +613,14 @@ class _UniversitiesGrid extends StatelessWidget {
   const _UniversitiesGrid({
     required this.universities,
     required this.onUniversityTap,
+    required this.savedIds,
+    required this.onSave,
   });
 
   final List<Map<String, dynamic>> universities;
   final void Function(Map<String, dynamic>) onUniversityTap;
+  final Set<String> savedIds;
+  final void Function(Map<String, dynamic>) onSave;
 
   @override
   Widget build(BuildContext context) {
@@ -640,6 +645,8 @@ class _UniversitiesGrid extends StatelessWidget {
           itemBuilder: (_, i) => UniversityCard(
             university: universities[i],
             onTap: () => onUniversityTap(universities[i]),
+            onSave: () => onSave(universities[i]),
+            isSaved: savedIds.contains(universities[i]['id']?.toString()),
           ),
         ),
       ],
