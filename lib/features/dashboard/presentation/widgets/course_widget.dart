@@ -52,7 +52,10 @@ class CourseCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: onTap ?? () => _showCountries(context),
+        onTap: () {
+          onTap?.call();
+          _showCountries(context);
+        },
         child: card,
       ),
     );

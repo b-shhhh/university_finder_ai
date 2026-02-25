@@ -25,6 +25,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<Map<String, dynamic>> universities = [];
   List<String> courses = [];
   List<String> countries = [];
+  Set<String> savedIds = {};
+  Map<String, Set<String>> courseCountries = {};
 
   @override
   void initState() {
@@ -38,29 +40,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final results = await Future.wait([
         ApiClient.I.get(ApiEndpoints.universities),
         ApiClient.I.get(ApiEndpoints.courses),
+        ApiClient.I.get(ApiEndpoints.savedUniversities).catchError((_) => null),
       ]);
 
       final uniRes = results[0];
       final courseRes = results[1];
+      final savedRes = results[2];
 
       universities = _extractList(uniRes.data)
           .whereType<Map>()
-          .map((e) => e.map((k, v) => MapEntry(k.toString(), v)))
+          .map((e) => _normalizeUniversity(e.map((k, v) => MapEntry(k.toString(), v))))
           .toList();
 
-      courses = _extractList(courseRes.data)
+      final apiCourses = _extractList(courseRes.data)
           .map((e) => e.toString())
-          .where((e) => e.trim().isNotEmpty)
-          .toList();
+          .where((e) => e.trim().isNotEmpty);
+      final inferredCourses = universities.expand(_coursesOf).map((e) => e.trim());
+
+      courses = {...apiCourses, ...inferredCourses}.where((e) => e.isNotEmpty).toList()..sort();
 
       countries = universities
           .map((u) => (u['country'] ?? '').toString().trim())
           .where((c) => c.isNotEmpty)
           .toSet()
-          .toList();
+          .toList()
+        ..sort();
+
+      if (savedRes != null) {
+        final ids = _extractList(savedRes.data);
+        savedIds = ids.map((e) => e.toString()).toSet();
+      }
 
       if (universities.isEmpty) {
         await _loadFromCsvFallback();
+      } else {
+        _recomputeCourseCountries();
       }
     } catch (e) {
       await _loadFromCsvFallback();
@@ -77,9 +91,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _loadFromCsvFallback() async {
     final loader = UniversityCsvLoader.instance;
     await loader.load();
-    universities = loader.universities.map((e) => Map<String, dynamic>.from(e)).toList();
+    universities = loader.universities
+        .map((e) => _normalizeUniversity(Map<String, dynamic>.from(e)))
+        .toList();
     courses = loader.courses;
     countries = loader.countries;
+    _recomputeCourseCountries();
+  }
+
+  Map<String, dynamic> _normalizeUniversity(Map<String, dynamic> uni) {
+    final copy = Map<String, dynamic>.from(uni);
+    copy['courses'] = _coursesOf(uni);
+    copy['country'] ??= uni['countryName'];
+    copy['id'] ??= uni['_id'] ?? uni['sourceId'] ?? uni['source_id'];
+    return copy;
+  }
+
+  List<String> _coursesOf(Map<String, dynamic> uni) {
+    final raw = uni['courses'];
+    if (raw is List) {
+      return raw.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).toList();
+    }
+    if (raw is String) {
+      return UniversityCsvLoader.splitCourses(raw);
+    }
+    return const [];
+  }
+
+  void _recomputeCourseCountries() {
+    final map = <String, Set<String>>{};
+    for (final uni in universities) {
+      final country = (uni['country'] ?? '').toString().trim();
+      if (country.isEmpty) continue;
+      for (final course in _coursesOf(uni)) {
+        final set = map.putIfAbsent(course, () => <String>{});
+        set.add(country);
+      }
+    }
+    courseCountries = map;
+  }
+
+  String? _resolveUniversityId(Map<String, dynamic> uni) {
+    final ids = [
+      uni['id'],
+      uni['_id'],
+      uni['sourceId'],
+      uni['source_id'],
+    ];
+    for (final id in ids) {
+      if (id != null && id.toString().trim().isNotEmpty) return id.toString();
+    }
+    return null;
   }
 
   List<MapEntry<String, int>> get countryCounts {

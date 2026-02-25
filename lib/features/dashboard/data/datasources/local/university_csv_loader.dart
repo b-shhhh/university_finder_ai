@@ -8,6 +8,16 @@ class UniversityCsvLoader {
 
   List<Map<String, String>> _rows = [];
 
+  /// Split a course string that may use commas or semicolons as separators.
+  static List<String> splitCourses(String? raw) {
+    if (raw == null || raw.isEmpty) return const [];
+    return raw
+        .split(RegExp(r'[;,]'))
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+  }
+
   Future<void> load() async {
     if (_rows.isNotEmpty) return;
     final csvString = await rootBundle.loadString('assets/universities.csv');
@@ -32,7 +42,7 @@ class UniversityCsvLoader {
 
   List<String> get courses => {
         for (final row in _rows)
-          ...(row['courses']?.split(',').map((e) => e.trim()) ?? [])
+          ...splitCourses(row['courses'])
       }.where((e) => e.isNotEmpty).toList()
         ..sort();
 
@@ -40,7 +50,10 @@ class UniversityCsvLoader {
       _rows.where((r) => (r['country'] ?? '').toLowerCase() == country.toLowerCase()).toList();
 
   List<Map<String, String>> universitiesByCourse(String course) =>
-      _rows.where((r) => (r['courses'] ?? '').toLowerCase().contains(course.toLowerCase())).toList();
+      _rows
+          .where((r) => splitCourses(r['courses'])
+              .any((c) => c.toLowerCase() == course.toLowerCase()))
+          .toList();
 
   Map<String, String>? universityById(String id) =>
       _rows.firstWhere((r) => (r['id'] ?? r['sourceId'] ?? '') == id, orElse: () => {});
