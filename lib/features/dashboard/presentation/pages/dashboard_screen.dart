@@ -48,10 +48,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final courseRes = results[1];
       final savedRes = results[2];
 
-      universities = _extractList(uniRes.data)
-          .whereType<Map>()
-          .map((e) => _normalizeUniversity(e.map((k, v) => MapEntry(k.toString(), v))))
-          .toList();
+      // Load and normalize universities from API, then deduplicate on frontend
+      final rawUnis = _extractList(uniRes.data).whereType<Map>().map(
+        (e) => _normalizeUniversity(e.map((k, v) => MapEntry(k.toString(), v))),
+      );
+
+      // Deduplicate using id when available, otherwise fall back to name|country
+      final Map<String, Map<String, dynamic>> unique = {};
+      for (final u in rawUnis) {
+        final id = (u['id'] ?? u['sourceId'] ?? u['_id'])?.toString();
+        final name = (u['name'] ?? '').toString().trim().toLowerCase();
+        final country = (u['country'] ?? '').toString().trim().toLowerCase();
+        final key = id != null && id.isNotEmpty ? 'id:$id' : 'nc:$name|$country';
+        if (key.startsWith('nc:') && (name.isEmpty || country.isEmpty)) {
+          // prefer to keep entries with both name and country; still accept if no id
+          unique.putIfAbsent(key, () => u);
+        } else {
+          unique.putIfAbsent(key, () => u);
+        }
+      }
+
+      universities = unique.values.toList();
 
       final apiCourses = _extractList(courseRes.data)
           .map((e) => e.toString())
