@@ -532,12 +532,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  void _triggerShakeRefresh() {
+  Future<void> _triggerShakeRefresh() async {
     if (loading) return;
-    _load();
+    await _load(); // ensure fresh data pulled before notifying
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Shake detected — refreshing universities...')),
+      const SnackBar(content: Text('Shake detected — universities refreshed')),
     );
   }
 }
