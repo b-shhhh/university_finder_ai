@@ -137,7 +137,19 @@ class UniversityCard extends StatelessWidget {
       return CircleAvatar(
         radius: 24,
         backgroundColor: const Color(0xFFE2E8F0),
-        backgroundImage: NetworkImage(url),
+        child: ClipOval(
+          child: Image.network(
+            url,
+            width: 40,
+            height: 40,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => const SizedBox(
+              width: 40,
+              height: 40,
+              child: Icon(Icons.school, size: 20),
+            ),
+          ),
+        ),
       );
     }
 
