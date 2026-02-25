@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../../core/api/api_client.dart';
 import '../../../../../core/api/api_endpoints.dart';
-import '../../widgets/university_detail_page.dart';
+import '../university_detail_page.dart';
 
 class SavedPage extends StatefulWidget {
   const SavedPage({
@@ -137,7 +137,11 @@ class _SavedPageState extends State<SavedPage> {
                           : Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => UniversityDetailPage(university: u),
+                                builder: (_) => UniversityDetailPage(
+                                  university: u,
+                                  isSaved: true, // Since it's in saved page, it's saved
+                                  onSaveToggle: id == null ? null : () => remove(id),
+                                ),
                               ),
                             ),
                     ),

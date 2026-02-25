@@ -1,13 +1,13 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../../core/api/api_client.dart';
 import '../../../../core/api/api_endpoints.dart';
 import '../../data/datasources/local/university_csv_loader.dart';
-import '../widgets/university_detail_page.dart';
 import '../widgets/country_widget.dart';
 import '../widgets/course_widget.dart';
+import '../widgets/university_widget.dart';
+import 'university_detail_page.dart';
 import 'package:Uniguide/common/navigation_bar.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -27,6 +27,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<String> countries = [];
   Set<String> savedIds = {};
   Map<String, Set<String>> courseCountries = {};
+  Map<String, Set<String>> countryCourses = {};
 
   @override
   void initState() {
@@ -40,7 +41,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final results = await Future.wait([
         ApiClient.I.get(ApiEndpoints.universities),
         ApiClient.I.get(ApiEndpoints.courses),
-        ApiClient.I.get(ApiEndpoints.savedUniversities).catchError((_) => null),
+        ApiClient.I.get(ApiEndpoints.savedUniversities),
       ]);
 
       final uniRes = results[0];
@@ -66,15 +67,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
           .toList()
         ..sort();
 
-      if (savedRes != null) {
+      try {
         final ids = _extractList(savedRes.data);
         savedIds = ids.map((e) => e.toString()).toSet();
+      } catch (_) {
+        // Saved universities failed to load, continue without them
       }
 
       if (universities.isEmpty) {
         await _loadFromCsvFallback();
       } else {
-        _recomputeCourseCountries();
+        _recomputeMappings();
       }
     } catch (e) {
       await _loadFromCsvFallback();
@@ -96,7 +99,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         .toList();
     courses = loader.courses;
     countries = loader.countries;
-    _recomputeCourseCountries();
+    _recomputeMappings();
   }
 
   Map<String, dynamic> _normalizeUniversity(Map<String, dynamic> uni) {
@@ -118,30 +121,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return const [];
   }
 
-  void _recomputeCourseCountries() {
-    final map = <String, Set<String>>{};
+  void _recomputeMappings() {
+    final courseToCountries = <String, Set<String>>{};
+    final countryToCourses = <String, Set<String>>{};
+
     for (final uni in universities) {
       final country = (uni['country'] ?? '').toString().trim();
       if (country.isEmpty) continue;
+
       for (final course in _coursesOf(uni)) {
-        final set = map.putIfAbsent(course, () => <String>{});
-        set.add(country);
+        // Course to countries mapping
+        final countrySet = courseToCountries.putIfAbsent(course, () => <String>{});
+        countrySet.add(country);
+
+        // Country to courses mapping
+        final courseSet = countryToCourses.putIfAbsent(country, () => <String>{});
+        courseSet.add(course);
       }
     }
-    courseCountries = map;
-  }
 
-  String? _resolveUniversityId(Map<String, dynamic> uni) {
-    final ids = [
-      uni['id'],
-      uni['_id'],
-      uni['sourceId'],
-      uni['source_id'],
-    ];
-    for (final id in ids) {
-      if (id != null && id.toString().trim().isNotEmpty) return id.toString();
-    }
-    return null;
+    courseCountries = courseToCountries;
+    countryCourses = countryToCourses;
   }
 
   List<MapEntry<String, int>> get countryCounts {
@@ -155,7 +155,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         .where((e) => e.key.toLowerCase().contains(search.toLowerCase()))
         .sorted((a, b) => b.value.compareTo(a.value) != 0
             ? b.value.compareTo(a.value)
-            : a.key.compareTo(b.key));
+            : a.key.compareTo(b.key))
+        .toList();
   }
 
   List<MapEntry<String, int>> get courseCounts {
@@ -171,7 +172,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         .where((e) => e.key.toLowerCase().contains(search.toLowerCase()))
         .sorted((a, b) => b.value.compareTo(a.value) != 0
             ? b.value.compareTo(a.value)
-            : a.key.compareTo(b.key));
+            : a.key.compareTo(b.key))
+        .toList();
   }
 
   List<Map<String, dynamic>> get filteredUniversities {
@@ -182,6 +184,97 @@ class _DashboardScreenState extends State<DashboardScreen> {
               .toLowerCase();
       return haystack.contains(term);
     }).toList();
+  }
+
+  Future<void> _toggleSave(Map<String, dynamic> university) async {
+    final id = university['id']?.toString();
+    if (id == null) return;
+
+    final isCurrentlySaved = savedIds.contains(id);
+    try {
+      if (isCurrentlySaved) {
+        // Remove from saved
+        await ApiClient.I.delete('${ApiEndpoints.savedUniversities}/$id');
+        setState(() => savedIds.remove(id));
+      } else {
+        // Add to saved
+        await ApiClient.I.post(ApiEndpoints.savedUniversities, data: {'university_id': id});
+        setState(() => savedIds.add(id));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to ${isCurrentlySaved ? 'unsave' : 'save'} university: $e')),
+        );
+      }
+    }
+  }
+
+  void _showUniversitiesForCountry(String country) {
+    final countryUniversities = universities
+        .where((u) => (u['country'] ?? '').toString().trim() == country)
+        .toList();
+
+    if (countryUniversities.isEmpty) return;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      isScrollControlled: true,
+      builder: (_) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.9,
+        builder: (_, controller) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Universities in $country',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                Text('${countryUniversities.length} universities found'),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: ListView.builder(
+                    controller: controller,
+                    itemCount: countryUniversities.length,
+                    itemBuilder: (context, index) {
+                      final uni = countryUniversities[index];
+                      return ListTile(
+                        leading: const Icon(Icons.school),
+                        title: Text(uni['name'] ?? 'Unknown University'),
+                        subtitle: Text(uni['city'] ?? ''),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => UniversityDetailPage(
+                                university: uni,
+                                isSaved: savedIds.contains(uni['id']?.toString()),
+                                onSaveToggle: () => _toggleSave(uni),
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -248,6 +341,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       name: c.key,
                                       universityCount: c.value,
                                       flagUrl: _flagForCountry(universities, c.key),
+                                      onTap: () => _showUniversitiesForCountry(c.key),
                                     ),
                                   )
                                   .toList(),
@@ -258,11 +352,96 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               subtitle: '${courseCounts.length} total',
                               itemHeight: 140,
                               children: courseCounts
-                                  .map((c) => CourseCard(name: c.key, universityCount: c.value))
+                                  .map((c) => CourseCard(
+                                        name: c.key,
+                                        universityCount: c.value,
+                                        countries: courseCountries[c.key]?.toList() ?? [],
+                                        onCountryTap: (country) {
+                                          // Show universities for this course and country
+                                          final filteredUnis = universities.where((u) {
+                                            final uniCountry = (u['country'] ?? '').toString().trim();
+                                            final uniCourses = _coursesOf(u);
+                                            return uniCountry == country && uniCourses.contains(c.key);
+                                          }).toList();
+
+                                          if (filteredUnis.isNotEmpty) {
+                                            showModalBottomSheet(
+                                              context: context,
+                                              shape: const RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+                                              ),
+                                              isScrollControlled: true,
+                                              builder: (_) => DraggableScrollableSheet(
+                                                expand: false,
+                                                initialChildSize: 0.7,
+                                                minChildSize: 0.5,
+                                                maxChildSize: 0.9,
+                                                builder: (_, controller) => SafeArea(
+                                                  child: Padding(
+                                                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                                                    child: Column(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      children: [
+                                                        Text(
+                                                          '${c.key} in $country',
+                                                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                                                        ),
+                                                        const SizedBox(height: 8),
+                                                        Text('${filteredUnis.length} universities found'),
+                                                        const SizedBox(height: 16),
+                                                        Expanded(
+                                                          child: ListView.builder(
+                                                            controller: controller,
+                                                            itemCount: filteredUnis.length,
+                                                            itemBuilder: (context, index) {
+                                                              final uni = filteredUnis[index];
+                                                              return ListTile(
+                                                                leading: const Icon(Icons.school),
+                                                                title: Text(uni['name'] ?? 'Unknown University'),
+                                                                subtitle: Text(uni['city'] ?? ''),
+                                                                trailing: const Icon(Icons.chevron_right),
+                                                                onTap: () {
+                                                                  Navigator.pop(context);
+                                                                  Navigator.push(
+                                                                    context,
+                                                                    MaterialPageRoute(
+                                                                      builder: (_) => UniversityDetailPage(
+                                                                        university: uni,
+                                                                        isSaved: savedIds.contains(uni['id']?.toString()),
+                                                                        onSaveToggle: () => _toggleSave(uni),
+                                                                      ),
+                                                                    ),
+                                                                  );
+                                                                },
+                                                              );
+                                                            },
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        },
+                                      ))
                                   .toList(),
                             ),
                             const SizedBox(height: 16),
-                            _UniversitiesGrid(universities: filteredUniversities.take(6).toList()),
+                            _UniversitiesGrid(
+                              universities: filteredUniversities.take(6).toList(),
+                              onUniversityTap: (university) => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => UniversityDetailPage(
+                                    university: university,
+                                    isSaved: savedIds.contains(university['id']?.toString()),
+                                    onSaveToggle: () => _toggleSave(university),
+                                  ),
+                                ),
+                              ),
+                            ),
                             const SizedBox(height: 16),
                             if (!isWide) chatbot,
                           ],
@@ -299,123 +478,81 @@ class _DashboardScreenState extends State<DashboardScreen> {
 /// Robustly pull a list out of various API response shapes.
 List _extractList(dynamic data) {
   if (data is List) return data;
-  if (data is Map) {
-    for (final key in ['data', 'results', 'items', 'universities', 'courses', 'countries']) {
-      final value = data[key];
-      if (value is List) return value;
-    }
-    for (final value in data.values) {
-      if (value is List) return value;
-      if (value is Map) {
-        for (final inner in value.values) {
-          if (inner is List) return inner;
-        }
-      }
-    }
-  }
+  if (data is Map && data['data'] is List) return data['data'];
+  if (data is Map && data['universities'] is List) return data['universities'];
+  if (data is Map && data['courses'] is List) return data['courses'];
   return const [];
 }
 
-String? _flagForCountry(List<Map<String, dynamic>> universities, String country) {
-  final match = universities.firstWhereOrNull(
-    (u) => (u['country'] ?? '').toString().trim().toLowerCase() == country.toLowerCase(),
-  );
-  if (match == null) return null;
+class _Stat extends StatelessWidget {
+  const _Stat({required this.label, required this.value});
 
-  final explicitFlag = match['flag_url'] ?? match['flagUrl'] ?? match['flag'];
-  if (explicitFlag != null && explicitFlag.toString().isNotEmpty) {
-    return explicitFlag.toString();
-  }
-
-  final alpha2 = match['alpha2'] ?? match['alpha_2'] ?? match['iso2'];
-  if (alpha2 == null || alpha2.toString().isEmpty) return null;
-  return 'https://flagcdn.com/w40/${alpha2.toString().toLowerCase()}.png';
-}
-
-String? _logoFor(Map<String, dynamic> uni) {
-  for (final key in ['logo_url', 'logoUrl', 'logo', 'image', 'logoURL']) {
-    final value = uni[key];
-    if (value != null && value.toString().isNotEmpty) return value.toString();
-  }
-  return null;
-}
-
-class _Stat {
   final String label;
   final int value;
-  _Stat({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Column(
+          children: [
+            Text(
+              value.toString(),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(color: Colors.black54, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _HeroSection extends StatelessWidget {
   const _HeroSection({required this.stats});
+
   final List<_Stat> stats;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF0F9AD8), Color(0xFF0C7FB9), Color(0xFF0A5C8F)],
+          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 6))],
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Search universities with clarity.',
-            style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900),
+            'Welcome to UniGuide',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           const Text(
-            'Top Countries. Top 50 Universities. One Smart Choice',
-            style: TextStyle(color: Colors.white70, fontSize: 13),
+            'Discover universities worldwide',
+            style: TextStyle(color: Colors.white70, fontSize: 16),
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: stats
-                .map(
-                  (s) => Expanded(
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: Colors.white24),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            s.label.toUpperCase(),
-                            style: const TextStyle(
-                              fontSize: 10,
-                              letterSpacing: 1.2,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white70,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            '${s.value}',
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                )
-                .toList(),
-          ),
+          const SizedBox(height: 20),
+          Row(children: stats),
         ],
       ),
     );
@@ -426,138 +563,132 @@ class _HorizontalSection extends StatelessWidget {
   const _HorizontalSection({
     required this.title,
     required this.subtitle,
-    required this.children,
     required this.itemHeight,
+    required this.children,
   });
 
   final String title;
   final String subtitle;
-  final List<Widget> children;
   final double itemHeight;
+  final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 11,
-              letterSpacing: 1.1,
-              fontWeight: FontWeight.bold,
-              color: Colors.black54,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              title,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              subtitle,
+              style: const TextStyle(color: Colors.black54, fontSize: 14),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: itemHeight,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: children.length,
+            separatorBuilder: (_, index) => const SizedBox(width: 12),
+            itemBuilder: (_, i) => SizedBox(
+              width: 200,
+              child: children[i],
             ),
           ),
-          Text(
-            subtitle,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.black87),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: itemHeight,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: children.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 10),
-              itemBuilder: (_, i) => SizedBox(width: 220, child: children[i]),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
 class _UniversitiesGrid extends StatelessWidget {
-  const _UniversitiesGrid({required this.universities});
+  const _UniversitiesGrid({
+    required this.universities,
+    required this.onUniversityTap,
+  });
+
+  final List<Map<String, dynamic>> universities;
+  final void Function(Map<String, dynamic>) onUniversityTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Universities',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.5,
+          ),
+          itemCount: universities.length,
+          itemBuilder: (_, i) => UniversityCard(
+            university: universities[i],
+            onTap: () => onUniversityTap(universities[i]),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ChatbotPanel extends StatelessWidget {
+  const _ChatbotPanel({required this.universities});
 
   final List<Map<String, dynamic>> universities;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Top Ranked Universities',
-            style: TextStyle(fontSize: 11, letterSpacing: 1.1, fontWeight: FontWeight.bold, color: Colors.black54),
+            'AI University Finder',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-          Text(
-            'Showing ${universities.length} of ${universities.length}',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          const SizedBox(height: 8),
+          const Text(
+            'Ask me about universities, courses, or countries!',
+            style: TextStyle(color: Colors.black54, fontSize: 14),
           ),
-          const SizedBox(height: 10),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: universities.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 1.35,
+          const SizedBox(height: 16),
+          TextField(
+            decoration: InputDecoration(
+              hintText: 'e.g., "Computer Science in Germany"',
+              filled: true,
+              fillColor: const Color(0xFFF8FAFC),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
             ),
-            itemBuilder: (_, i) {
-              final u = universities[i];
-              final logo = _logoFor(u);
-              final avatar = logo != null && logo.isNotEmpty
-                  ? (logo.toLowerCase().endsWith('.svg')
-                      ? CircleAvatar(
-                          backgroundColor: const Color(0xFFE2E8F0),
-                          child: ClipOval(
-                            child: SvgPicture.network(
-                              logo,
-                              width: 36,
-                              height: 36,
-                              fit: BoxFit.cover,
-                              placeholderBuilder: (_) =>
-                                  const Icon(Icons.school, color: Colors.grey),
-                            ),
-                          ),
-                        )
-                      : CircleAvatar(
-                          backgroundColor: const Color(0xFFE2E8F0),
-                          backgroundImage: NetworkImage(logo),
-                          onBackgroundImageError: (_, __) {},
-                        ))
-                  : (_flagForCountry([u], u['country']?.toString() ?? '') != null
-                      ? CircleAvatar(
-                          backgroundColor: const Color(0xFFE2E8F0),
-                          backgroundImage:
-                              NetworkImage(_flagForCountry([u], u['country']?.toString() ?? '')!),
-                          onBackgroundImageError: (_, __) {},
-                        )
-                      : const CircleAvatar(child: Icon(Icons.school)));
-              return GestureDetector(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => UniversityDetailPage(university: u),
-                  ),
-                ),
-                child: _SimpleCard(
-                  leading: avatar,
-                  title: u['name']?.toString() ?? '',
-                  subtitle: u['country']?.toString() ?? '',
-                ),
+            onSubmitted: (query) {
+              // TODO: Implement AI search
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Searching for: $query')),
               );
             },
           ),
@@ -567,165 +698,12 @@ class _UniversitiesGrid extends StatelessWidget {
   }
 }
 
-class _ChatbotPanel extends StatefulWidget {
-  const _ChatbotPanel({required this.universities});
-  final List<Map<String, dynamic>> universities;
-
-  @override
-  State<_ChatbotPanel> createState() => _ChatbotPanelState();
-}
-
-class _ChatbotPanelState extends State<_ChatbotPanel> {
-  final _messages = <_ChatMessage>[
-    _ChatMessage(text: 'Hi! Ask about universities, countries, or courses.', fromUser: false)
-  ];
-  final _ctrl = TextEditingController();
-  bool _typing = false;
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
+String? _flagForCountry(List<Map<String, dynamic>> universities, String country) {
+  for (final u in universities) {
+    if ((u['country'] ?? '').toString().trim() == country) {
+      final flag = u['flag_url'] ?? u['flagUrl'];
+      if (flag != null && flag.toString().isNotEmpty) return flag.toString();
+    }
   }
-
-  void _send() {
-    final text = _ctrl.text.trim();
-    if (text.isEmpty) return;
-    setState(() {
-      _messages.add(_ChatMessage(text: text, fromUser: true));
-      _ctrl.clear();
-      _typing = true;
-    });
-    Future.delayed(const Duration(milliseconds: 350), () {
-      final reply = _buildReply(text);
-      setState(() {
-        _messages.add(_ChatMessage(text: reply, fromUser: false));
-        _typing = false;
-      });
-    });
-  }
-
-  String _buildReply(String prompt) {
-    final term = prompt.toLowerCase();
-    final hits = widget.universities.where((u) {
-      final hay = '${u['name']} ${u['country']} ${(u['courses'] ?? []).join(' ')}'.toLowerCase();
-      return hay.contains(term);
-    }).take(3).toList();
-    if (hits.isEmpty) return "I couldn't find matches yet. Try a country, course, or university name.";
-    final lines = hits
-        .map((u) =>
-            '- ${u['name']} - ${u['country']}${(u['courses'] as List?)?.isNotEmpty == true ? ' | top course ${(
-                u['courses'] as List).first}' : ''}')
-        .join('\n');
-    return 'Here are a few options:\n$lines';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Chatbot', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 260,
-            child: ListView.builder(
-              itemCount: _messages.length + (_typing ? 1 : 0),
-              itemBuilder: (_, i) {
-                if (_typing && i == _messages.length) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 4),
-                    child: Text('... ', style: TextStyle(color: Colors.grey)),
-                  );
-                }
-                final m = _messages[i];
-                return Align(
-                  alignment: m.fromUser ? Alignment.centerRight : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: m.fromUser ? const Color(0xFF0F9AD8) : const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      m.text,
-                      style: TextStyle(color: m.fromUser ? Colors.white : Colors.black87),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _ctrl,
-                  decoration: const InputDecoration(
-                    hintText: 'Ask about a course, country, or university...',
-                    isDense: true,
-                  ),
-                  onSubmitted: (_) => _send(),
-                ),
-              ),
-              IconButton(icon: const Icon(Icons.send), onPressed: _send),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ChatMessage {
-  final String text;
-  final bool fromUser;
-  _ChatMessage({required this.text, required this.fromUser});
-}
-
-class _SimpleCard extends StatelessWidget {
-  const _SimpleCard({required this.title, required this.subtitle, this.leading});
-
-  final String title;
-  final String subtitle;
-  final Widget? leading;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3))],
-      ),
-      child: Row(
-        children: [
-          if (leading != null) leading!,
-          if (leading != null) const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text(subtitle, style: const TextStyle(color: Colors.black54, fontSize: 12)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  return null;
 }
