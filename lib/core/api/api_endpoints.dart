@@ -3,7 +3,7 @@ class ApiEndpoints {
   static const baseUrl = String.fromEnvironment(
     'API_BASE_URL',
     // Physical device needs LAN IP; override with --dart-define as needed.
-    defaultValue: 'http://192.168.1.6:5050/api',
+    defaultValue: 'http://192.168.1.3:5050/api',
   );
 
   // Auth

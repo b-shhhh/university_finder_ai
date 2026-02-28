@@ -79,12 +79,24 @@ class ApiClient {
   static const _tokenStorage = FlutterSecureStorage();
 
   static String _resolveBaseUrl() {
-    final base = ApiEndpoints.baseUrl;
+    const base = ApiEndpoints.baseUrl;
+    // Optional per-emulator override: flutter run --dart-define=API_BASE_URL_EMULATOR=http://10.0.2.2:5050/api
+    const emulatorOverride = String.fromEnvironment(
+      'API_BASE_URL_EMULATOR',
+      defaultValue: '',
+    );
+
     if (kIsWeb) return base;
-    // Android emulator can't hit localhost; map to host machine.
-    if (Platform.isAndroid && base.contains('localhost')) {
-      return base.replaceFirst('localhost', '10.0.2.2');
+
+    if (Platform.isAndroid) {
+      if (emulatorOverride.isNotEmpty) return emulatorOverride;
+
+      // Android emulator can't hit localhost; map to host machine.
+      if (base.contains('localhost') || base.contains('127.0.0.1')) {
+        return base.replaceFirst(RegExp(r'localhost|127\\.0\\.0\\.1'), '10.0.2.2');
+      }
     }
+
     return base;
   }
 
