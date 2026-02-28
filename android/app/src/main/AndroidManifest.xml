@@ -9,7 +9,7 @@
         android:maxSdkVersion="32" />
 
     <application
-        android:label="university_finder_ai"
+        android:label="Uniguide"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
 
