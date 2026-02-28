@@ -5,8 +5,18 @@ import '../features/dashboard/presentation/pages/bottom screen/profile_page.dart
 class MyNavigationBar extends StatelessWidget {
   final int currentIndex;
   final Function(int)? onTap;
+  final List<String>? savedIds;
+  final List<Map<String, dynamic>>? allUniversities;
+  final void Function(List<String> ids)? onSavedChanged;
 
-  const MyNavigationBar({super.key, required this.currentIndex, this.onTap});
+  const MyNavigationBar({
+    super.key,
+    required this.currentIndex,
+    this.onTap,
+    this.savedIds,
+    this.allUniversities,
+    this.onSavedChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +50,13 @@ class MyNavigationBar extends StatelessWidget {
       case 1:
         // Navigate to saved page
         Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const SavedPage()),
+          MaterialPageRoute(
+            builder: (_) => SavedPage(
+              savedIds: savedIds,
+              allUniversities: allUniversities,
+              onSavedChanged: onSavedChanged,
+            ),
+          ),
         );
         break;
       case 2:

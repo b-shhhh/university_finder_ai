@@ -14,6 +14,8 @@ import '../widgets/course_widget.dart';
 import '../widgets/university_widget.dart';
 import '../widgets/dashboard_chatbot.dart';
 import 'university_detail_page.dart';
+import 'bottom screen/saved_page.dart';
+import 'bottom screen/profile_page.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -342,6 +344,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       bottomNavigationBar: MyNavigationBar(
         currentIndex: _navIndex,
+        savedIds: savedIds.toList(),
+        allUniversities: universities,
+        onSavedChanged: (ids) => setState(() => savedIds = ids.toSet()),
+        onTap: _onNavTap,
       ),
       body: SafeArea(
         child: LayoutBuilder(
@@ -512,6 +518,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _openChatbotSheet() {
     showDashboardChatbot(context, universities);
+  }
+
+  void _onNavTap(int index) {
+    setState(() => _navIndex = index);
+    if (index == 0) return;
+    if (index == 1) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => SavedPage(
+            savedIds: savedIds.toList(),
+            allUniversities: universities,
+            onSavedChanged: (ids) => setState(() => savedIds = ids.toSet()),
+          ),
+        ),
+      );
+    } else if (index == 2) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const ProfilePage()),
+      );
+    }
   }
 
   @override
