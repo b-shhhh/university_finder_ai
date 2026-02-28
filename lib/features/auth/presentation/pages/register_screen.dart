@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../../core/api/api_endpoints.dart';
+import '../widgets/animated_cap.dart';
 
 Future<bool> register({
   required String fullName,
@@ -65,103 +66,116 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Center(
-        child: Container(
-          width: 540,
-          padding: const EdgeInsets.all(28),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 28,
-                offset: const Offset(0, 12),
-              ),
-            ],
-          ),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: widget.primary.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(20),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 540,
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 28,
+                    offset: const Offset(0, 12),
                   ),
-                  child: const Text("NEW ACCOUNT", style: TextStyle(color: Color(0xFF0066B3), fontWeight: FontWeight.w700)),
-                ),
-                const SizedBox(height: 14),
-                const Text(
-                  "Create account",
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  "Sign up to build your university shortlist.",
-                  style: TextStyle(color: Color(0xFF6B7280)),
-                ),
-                const SizedBox(height: 20),
-                _input("Full name", fullNameController),
-                const SizedBox(height: 14),
-                _input("Email", emailController, keyboard: TextInputType.emailAddress, validator: _emailValidator),
-                const SizedBox(height: 14),
-                _passwordInput("Password", passwordController, isConfirm: false),
-                const SizedBox(height: 14),
-                _passwordInput("Confirm password", confirmPasswordController, isConfirm: true),
-                const SizedBox(height: 14),
-                Row(
+                ],
+              ),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      flex: 1,
-                      child: _input("Country code", countryCodeController, keyboard: TextInputType.phone),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: widget.primary.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text("NEW ACCOUNT", style: TextStyle(color: Color(0xFF0066B3), fontWeight: FontWeight.w700)),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 3,
-                      child: _input("Phone number", phoneController, keyboard: TextInputType.phone),
+                    const SizedBox(height: 14),
+                    const Text(
+                      "Create account",
+                      style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      "Sign up to build your university shortlist.",
+                      style: TextStyle(color: Color(0xFF6B7280)),
+                    ),
+                    const SizedBox(height: 20),
+                    _input("Full name", fullNameController),
+                    const SizedBox(height: 14),
+                    _input("Email", emailController, keyboard: TextInputType.emailAddress, validator: _emailValidator),
+                    const SizedBox(height: 14),
+                    _passwordInput("Password", passwordController, isConfirm: false),
+                    const SizedBox(height: 14),
+                    _passwordInput("Confirm password", confirmPasswordController, isConfirm: true),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 1,
+                          child: _input("Country code", countryCodeController, keyboard: TextInputType.phone),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 3,
+                          child: _input("Phone number", phoneController, keyboard: TextInputType.phone),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: loading ? null : _submit,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: widget.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: loading
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Text("REGISTER", style: TextStyle(fontWeight: FontWeight.w700)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Center(
+                      child: TextButton(
+                        onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
+                        child: const Text.rich(
+                          TextSpan(
+                            text: "Already have an account? ",
+                            style: TextStyle(color: Color(0xFF6B7280)),
+                            children: [
+                              TextSpan(text: "LOGIN", style: TextStyle(color: Color(0xFF0C99C3), fontWeight: FontWeight.w700)),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 18),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: loading ? null : _submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: widget.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    child: loading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Text("REGISTER", style: TextStyle(fontWeight: FontWeight.w700)),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Center(
-                  child: TextButton(
-                    onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
-                    child: const Text.rich(
-                      TextSpan(
-                        text: "Already have an account? ",
-                        style: TextStyle(color: Color(0xFF6B7280)),
-                        children: [
-                          TextSpan(text: "LOGIN", style: TextStyle(color: Color(0xFF0C99C3), fontWeight: FontWeight.w700)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
+            Positioned(
+              top: -18,
+              right: -10,
+              child: AnimatedCap(
+                color: widget.primary,
+                shadowColor: widget.primary.withOpacity(0.25),
+              ),
+            ),
+          ],
         ),
       ),
     );

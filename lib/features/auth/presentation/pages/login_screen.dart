@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../../core/api/api_endpoints.dart';
+import '../widgets/animated_cap.dart';
 
 Future<Map<String, dynamic>> login(String email, String password) async {
   try {
@@ -48,93 +49,103 @@ class _LoginScreenState extends State<LoginScreen> {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Center(
-        child: Container(
-          width: 520,
-          padding: const EdgeInsets.all(28),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 28,
-                offset: const Offset(0, 12),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 520,
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 28,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: LoginScreen.primary.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text("ACCOUNT ACCESS", style: TextStyle(color: Color(0xFF0066B3), fontWeight: FontWeight.w700)),
-                ),
-                const SizedBox(height: 14),
-                const Text(
-                  "Welcome back",
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  "Sign in to continue your university search.",
-                  style: TextStyle(color: Color(0xFF6B7280)),
-                ),
-                const SizedBox(height: 20),
-                _input("Email address", _email, keyboard: TextInputType.emailAddress, validator: _emailValidator),
-                const SizedBox(height: 14),
-                _passwordInput("Password", _password),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () => Navigator.pushNamed(context, '/forgot-password'),
-                    child: const Text("Forgot password?"),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: loading ? null : _submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: LoginScreen.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: LoginScreen.primary.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text("ACCOUNT ACCESS", style: TextStyle(color: Color(0xFF0066B3), fontWeight: FontWeight.w700)),
                     ),
-                    child: loading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Text("SIGN IN", style: TextStyle(fontWeight: FontWeight.w700)),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Center(
-                  child: TextButton(
-                    onPressed: () => Navigator.pushReplacementNamed(context, '/register'),
-                    child: const Text.rich(
-                      TextSpan(
-                        text: "Don't have an account? ",
-                        style: TextStyle(color: Color(0xFF6B7280)),
-                        children: [
-                          TextSpan(text: "SIGN UP", style: TextStyle(color: Color(0xFF0C99C3), fontWeight: FontWeight.w700)),
-                        ],
+                    const SizedBox(height: 14),
+                    const Text(
+                      "Welcome back",
+                      style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      "Sign in to continue your university search.",
+                      style: TextStyle(color: Color(0xFF6B7280)),
+                    ),
+                    const SizedBox(height: 20),
+                    _input("Email address", _email, keyboard: TextInputType.emailAddress, validator: _emailValidator),
+                    const SizedBox(height: 14),
+                    _passwordInput("Password", _password),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => Navigator.pushNamed(context, '/forgot-password'),
+                        child: const Text("Forgot password?"),
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: loading ? null : _submit,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: LoginScreen.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: loading
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Text("SIGN IN", style: TextStyle(fontWeight: FontWeight.w700)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Center(
+                      child: TextButton(
+                        onPressed: () => Navigator.pushReplacementNamed(context, '/register'),
+                        child: const Text.rich(
+                          TextSpan(
+                            text: "Don't have an account? ",
+                            style: TextStyle(color: Color(0xFF6B7280)),
+                            children: [
+                              TextSpan(text: "SIGN UP", style: TextStyle(color: Color(0xFF0C99C3), fontWeight: FontWeight.w700)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
+            const Positioned(
+              top: -18,
+              right: -10,
+              child: AnimatedCap(),
+            ),
+          ],
         ),
       ),
     );
