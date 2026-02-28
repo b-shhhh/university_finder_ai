@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../../core/api/api_endpoints.dart';
+import '../../../../app/theme/app_colors.dart';
 import '../widgets/animated_cap.dart';
 
 Future<Map<String, dynamic>> login(String email, String password) async {
@@ -23,7 +24,7 @@ Future<Map<String, dynamic>> login(String email, String password) async {
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
-  static const Color primary = Color(0xFF0066B3);
+  static const Color primary = AppColors.primary;
   static const Color bg = Color(0xFFF7FBFF);
 
   @override
@@ -77,7 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: LoginScreen.primary.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Text("ACCOUNT ACCESS", style: TextStyle(color: Color(0xFF0066B3), fontWeight: FontWeight.w700)),
+                  child: const Text("ACCOUNT ACCESS", style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700)),
                     ),
                     const SizedBox(height: 14),
                     const Text(

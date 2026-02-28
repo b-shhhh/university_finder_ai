@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:Uniguide/app/theme/app_colors.dart';
 
 /// A small graduation cap with a subtle hover/tilt animation.
 class AnimatedCap extends StatefulWidget {
   const AnimatedCap({
     super.key,
     this.size = 48,
-    this.color = const Color(0xFF0066B3),
-    this.shadowColor = const Color(0x330066B3),
+    this.color = AppColors.primary,
+    this.shadowColor = const Color.fromARGB(80, 21, 122, 148),
     this.duration = const Duration(milliseconds: 2600),
   });
 

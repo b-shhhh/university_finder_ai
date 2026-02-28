@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../../core/api/api_endpoints.dart';
+import '../../../../app/theme/app_colors.dart';
 import '../widgets/animated_cap.dart';
 
 Future<bool> register({
@@ -34,7 +35,7 @@ Future<bool> register({
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
-  final Color primary = const Color(0xFF0066B3);
+  final Color primary = AppColors.primary;
   final Color bg = const Color(0xFFF7FBFF);
 
   @override
@@ -94,7 +95,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         color: widget.primary.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Text("NEW ACCOUNT", style: TextStyle(color: Color(0xFF0066B3), fontWeight: FontWeight.w700)),
+                      child: const Text("NEW ACCOUNT", style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700)),
                     ),
                     const SizedBox(height: 14),
                     const Text(
