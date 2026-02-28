@@ -44,13 +44,16 @@ class _SavedPageState extends State<SavedPage> {
   }
 
   Future<void> loadSaved() async {
-    setState(() => loading = true);
+    // Keep existing content visible during refresh.
+    setState(() => loading = loading && universities.isEmpty);
     try {
       // Prefer provided IDs if present; otherwise fetch from API.
       if (widget.savedIds != null) {
         savedIds = widget.savedIds!;
       } else {
-        final savedRes = await ApiClient.I.get(ApiEndpoints.savedUniversities);
+        final savedRes = await ApiClient.I
+            .get(ApiEndpoints.savedUniversities)
+            .timeout(const Duration(seconds: 8));
         final ids = (savedRes.data is Map ? savedRes.data['data'] : savedRes.data) as List;
         savedIds = ids.map((e) => e.toString()).toList();
       }
@@ -81,7 +84,9 @@ class _SavedPageState extends State<SavedPage> {
       final fetched = await Future.wait(
         missing.map((id) async {
           try {
-            final detail = await ApiClient.I.get("${ApiEndpoints.universities}/$id");
+            final detail = await ApiClient.I
+                .get("${ApiEndpoints.universities}/$id")
+                .timeout(const Duration(seconds: 8));
             final data = detail.data is Map ? (detail.data['data'] ?? detail.data) : detail.data;
             return Map<String, dynamic>.from(data);
           } catch (_) {
