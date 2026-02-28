@@ -28,9 +28,9 @@ class ApiClient {
     final dio = Dio(
       BaseOptions(
         baseUrl: baseUrl,
-        // Balanced: tolerant of cold starts without 25s noise.
-        connectTimeout: const Duration(seconds: 20),
-        receiveTimeout: const Duration(seconds: 45),
+        // Keep requests snappy; fail fast and fall back.
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 20),
         responseType: ResponseType.json,
       ),
     );
