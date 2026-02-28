@@ -43,26 +43,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _load(showSpinner: true);
+    _load();
     _accelSub = accelerometerEvents.listen(_checkShake);
   }
 
-  Future<void> _load({bool showSpinner = false}) async {
-    // Only block the UI if we have nothing to display yet.
-    if (showSpinner || universities.isEmpty) {
-      setState(() => loading = true);
-    }
+  Future<void> _load() async {
+    setState(() => loading = true);
     try {
       final results = await Future.wait([
-        ApiClient.I
-            .get(ApiEndpoints.universities)
-            .timeout(const Duration(seconds: 8)),
-        ApiClient.I
-            .get(ApiEndpoints.courses)
-            .timeout(const Duration(seconds: 8)),
-        ApiClient.I
-            .get(ApiEndpoints.savedUniversities)
-            .timeout(const Duration(seconds: 8)),
+        ApiClient.I.get(ApiEndpoints.universities),
+        ApiClient.I.get(ApiEndpoints.courses),
+        ApiClient.I.get(ApiEndpoints.savedUniversities),
       ]);
 
       final uniRes = results[0];
