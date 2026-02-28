@@ -9,19 +9,34 @@ import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'api_endpoints.dart';
 
 /// Centralized REST client configured for the backend API.
-/// Handles auth header injection, retries for idempotent GETs, and simple error mapping.
+/// Now supports host fallback so it works on both emulator and physical device without manual switches.
 class ApiClient {
-  ApiClient._internal()
-      : _dio = Dio(
-          BaseOptions(
-            baseUrl: _resolveBaseUrl(),
-            connectTimeout: const Duration(seconds: 25),
-            receiveTimeout: const Duration(seconds: 35),
-            responseType: ResponseType.json,
-          ),
-        ) {
+  ApiClient._internal() {
+    _baseCandidates = _buildBaseCandidates();
+    _dio = _newDio(_baseCandidates.first);
+  }
+
+  static final ApiClient _instance = ApiClient._internal();
+  static ApiClient get I => _instance;
+
+  late Dio _dio;
+  late List<String> _baseCandidates;
+  static const _tokenKey = 'auth_token';
+  static const _tokenStorage = FlutterSecureStorage();
+
+  Dio _newDio(String baseUrl) {
+    final dio = Dio(
+      BaseOptions(
+        baseUrl: baseUrl,
+        // Balanced: tolerant of cold starts without 25s noise.
+        connectTimeout: const Duration(seconds: 20),
+        receiveTimeout: const Duration(seconds: 45),
+        responseType: ResponseType.json,
+      ),
+    );
+
     // Auth token injector
-    _dio.interceptors.add(
+    dio.interceptors.add(
       InterceptorsWrapper(onRequest: (options, handler) async {
         final token = await _tokenStorage.read(key: _tokenKey);
         if (token != null && token.isNotEmpty) {
@@ -39,9 +54,9 @@ class ApiClient {
     );
 
     // Retry idempotent GET/HEAD
-    _dio.interceptors.add(
+    dio.interceptors.add(
       RetryInterceptor(
-        dio: _dio,
+        dio: dio,
         logPrint: (obj) {},
         retries: 2,
         retryDelays: const [
@@ -58,7 +73,7 @@ class ApiClient {
 
     // Logging (dev only)
     if (kDebugMode) {
-      _dio.interceptors.add(
+      dio.interceptors.add(
         PrettyDioLogger(
           requestHeader: false,
           requestBody: true,
@@ -69,51 +84,88 @@ class ApiClient {
         ),
       );
     }
+
+    return dio;
   }
 
-  static final ApiClient _instance = ApiClient._internal();
-  static ApiClient get I => _instance;
-
-  final Dio _dio;
-  static const _tokenKey = 'auth_token';
-  static const _tokenStorage = FlutterSecureStorage();
-
-  static String _resolveBaseUrl() {
+  static List<String> _buildBaseCandidates() {
     const base = ApiEndpoints.baseUrl;
-    // Optional per-emulator override: flutter run --dart-define=API_BASE_URL_EMULATOR=http://10.0.2.2:5050/api
-    const emulatorOverride = String.fromEnvironment(
-      'API_BASE_URL_EMULATOR',
-      defaultValue: '',
-    );
+    const emulatorOverride = String.fromEnvironment('API_BASE_URL_EMULATOR', defaultValue: '');
+    const hostOverride = String.fromEnvironment('API_BASE_URL', defaultValue: '');
 
-    if (kIsWeb) return base;
+    final candidates = <String>[];
+    void add(String v) {
+      if (v.isNotEmpty && !candidates.contains(v)) candidates.add(v);
+    }
 
-    if (Platform.isAndroid) {
-      if (emulatorOverride.isNotEmpty) return emulatorOverride;
+    // Highest priority: explicit overrides
+    add(hostOverride);
+    add(base);
 
-      // Android emulator can't hit localhost; map to host machine.
+    if (!kIsWeb && Platform.isAndroid) {
+      add(emulatorOverride);
+
       if (base.contains('localhost') || base.contains('127.0.0.1')) {
-        return base.replaceFirst(RegExp(r'localhost|127\\.0\\.0\\.1'), '10.0.2.2');
+        add(base.replaceFirst(RegExp(r'localhost|127\.0\.0\.1'), '10.0.2.2'));
+      }
+
+      // direct emulator loopback commonly used
+      add('http://10.0.2.2:5050/api');
+    }
+
+    // Common LAN fallbacks (adjust to your network; harmless if unreachable)
+    add('http://192.168.1.6:5050/api');
+    add('http://192.168.1.3:5050/api');
+    add('http://localhost:5050/api');
+
+    return candidates;
+  }
+
+  Future<Response<T>> _withFallback<T>(
+    String path,
+    Future<Response<T>> Function(Dio client) run,
+  ) async {
+    DioException? lastConnErr;
+
+    for (final base in _baseCandidates) {
+      if (_dio.options.baseUrl != base) {
+        _dio = _newDio(base);
+      }
+      try {
+        return await run(_dio);
+      } on DioException catch (e) {
+        final isConnIssue = e.type == DioExceptionType.connectionTimeout ||
+            e.type == DioExceptionType.connectionError;
+        if (!isConnIssue) rethrow; // surface server / auth errors
+        lastConnErr = e;
+        // try next host
       }
     }
 
-    return base;
+    return Response<T>(
+      requestOptions: RequestOptions(path: path),
+      statusCode: 504,
+      data: {
+        'message': 'Unable to reach server right now.',
+        'error': lastConnErr?.message ?? 'All hosts unreachable',
+      } as T?,
+    );
   }
 
   Future<Response<T>> get<T>(String path, {Map<String, dynamic>? query}) async {
-    return _dio.get<T>(path, queryParameters: query);
+    return _withFallback<T>(path, (c) => c.get<T>(path, queryParameters: query));
   }
 
   Future<Response<T>> post<T>(String path, {dynamic data}) async {
-    return _dio.post<T>(path, data: data);
+    return _withFallback<T>(path, (c) => c.post<T>(path, data: data));
   }
 
   Future<Response<T>> put<T>(String path, {dynamic data}) async {
-    return _dio.put<T>(path, data: data);
+    return _withFallback<T>(path, (c) => c.put<T>(path, data: data));
   }
 
   Future<Response<T>> delete<T>(String path, {dynamic data}) async {
-    return _dio.delete<T>(path, data: data);
+    return _withFallback<T>(path, (c) => c.delete<T>(path, data: data));
   }
 
   /// Persist JWT for subsequent requests.
