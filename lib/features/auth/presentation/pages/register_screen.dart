@@ -153,16 +153,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     Center(
                       child: TextButton(
                         onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
-                        child: const Text.rich(
-                          TextSpan(
-                            text: "Already have an account? ",
-                            style: TextStyle(color: Color(0xFF6B7280)),
-                            children: [
-                              TextSpan(text: "LOGIN", style: TextStyle(color: Color(0xFF0C99C3), fontWeight: FontWeight.w700)),
-                            ],
-                          ),
-                        ),
-                      ),
+                  child: const Text.rich(
+                    TextSpan(
+                      text: "Already have an account? ",
+                      style: TextStyle(color: Color(0xFF6B7280)),
+                      children: [
+                          TextSpan(text: "LOGIN", style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  ),
+                ),
                     ),
                   ],
                 ),

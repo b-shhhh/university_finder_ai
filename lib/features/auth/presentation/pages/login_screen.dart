@@ -126,16 +126,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     Center(
                       child: TextButton(
                         onPressed: () => Navigator.pushReplacementNamed(context, '/register'),
-                        child: const Text.rich(
-                          TextSpan(
-                            text: "Don't have an account? ",
-                            style: TextStyle(color: Color(0xFF6B7280)),
-                            children: [
-                              TextSpan(text: "SIGN UP", style: TextStyle(color: Color(0xFF0C99C3), fontWeight: FontWeight.w700)),
-                            ],
-                          ),
-                        ),
-                      ),
+                  child: const Text.rich(
+                    TextSpan(
+                      text: "Don't have an account? ",
+                      style: TextStyle(color: Color(0xFF6B7280)),
+                      children: [
+                          TextSpan(text: "SIGN UP", style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  ),
+                ),
                     ),
                   ],
                 ),
