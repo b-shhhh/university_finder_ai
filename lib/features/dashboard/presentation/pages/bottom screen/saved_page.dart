@@ -65,19 +65,31 @@ class _SavedPageState extends State<SavedPage> {
           );
           if (match.isNotEmpty) universities.add(match);
         }
+        // If we already populated all saved universities locally, skip network.
+        if (universities.length == savedIds.length) {
+          widget.onSavedChanged?.call(savedIds);
+          setState(() => loading = false);
+          return;
+        }
       }
 
       // Fetch missing ones from API.
       final missing = savedIds.where(
         (id) => universities.every((u) => _resolveId(u) != id),
       );
-      for (final id in missing) {
-        try {
-          final detail = await ApiClient.I.get("${ApiEndpoints.universities}/$id");
-          final data = detail.data is Map ? (detail.data['data'] ?? detail.data) : detail.data;
-          universities.add(Map<String, dynamic>.from(data));
-        } catch (_) {}
-      }
+
+      final fetched = await Future.wait(
+        missing.map((id) async {
+          try {
+            final detail = await ApiClient.I.get("${ApiEndpoints.universities}/$id");
+            final data = detail.data is Map ? (detail.data['data'] ?? detail.data) : detail.data;
+            return Map<String, dynamic>.from(data);
+          } catch (_) {
+            return null;
+          }
+        }),
+      );
+      universities.addAll(fetched.whereType<Map<String, dynamic>>());
 
       widget.onSavedChanged?.call(savedIds);
     } catch (e) {
