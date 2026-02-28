@@ -345,8 +345,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final isWide = constraints.maxWidth >= 1100;
-
             final scroll = RefreshIndicator(
               onRefresh: _load,
               child: CustomScrollView(
