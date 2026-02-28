@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  // Primary Colors - Modern Gradient Blue/Purple
-  static const Color primary = Color(0xFF6C63FF);
-  static const Color primaryDark = Color(0xFF5B54E8);
-  static const Color primaryLight = Color(0xFF8F87FF);
+  // Primary Colors - UniGuide teal palette
+  static const Color primary = Color(0xFF157A94);
+  static const Color primaryDark = Color(0xFF0F5E70);
+  static const Color primaryLight = Color(0xFF1D93B4);
 
   // Secondary Colors
   static const Color secondary = Color(0xFFFF6584);
@@ -87,7 +87,7 @@ class AppColors {
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF6C63FF), Color(0xFF5B54E8)],
+    colors: [primary, primaryLight],
   );
 
   static const LinearGradient secondaryGradient = LinearGradient(
@@ -102,10 +102,10 @@ class AppColors {
     colors: [Color(0xFF4ECDC4), Color(0xFF98D8C8)],
   );
 
-  static const LinearGradient backgroundGradient = LinearGradient(
+  static final LinearGradient backgroundGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Color(0xFFF8F9FE), Color(0xFFFFFFFF)],
+    colors: [primary.withOpacity(0.12), Colors.white],
   );
 
   // Onboarding Gradients

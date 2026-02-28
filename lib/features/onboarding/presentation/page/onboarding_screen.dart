@@ -25,7 +25,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingScreen>
       description:
       'Find top universities worldwide based on your interests, grades, and goals.',
       icon: Icons.school_rounded,
-      color: AppColors.onboarding1Primary,
+      color: AppColors.primary,
       gradientColors: [],
     ),
     OnboardingItem(
@@ -33,7 +33,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingScreen>
       description:
       'Compare courses, rankings, fees, and locations before you decide.',
       icon: Icons.compare_arrows_rounded,
-      color: AppColors.onboarding2Primary,
+      color: AppColors.primary,
       gradientColors: [],
     ),
     OnboardingItem(
@@ -41,7 +41,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingScreen>
       description:
       'Get AI-powered recommendations tailored just for you.',
       icon: Icons.rocket_launch_rounded,
-      color: AppColors.onboarding3Primary,
+      color: AppColors.primary,
       gradientColors: [],
     ),
   ];
