@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:Uniguide/app/theme/app_colors.dart';
 import '../../../../core/api/api_client.dart';
 
 /// Chatbot UI that calls backend `/api/chatbot`.
@@ -108,7 +109,7 @@ class _ChatbotPanelState extends State<_ChatbotPanel> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: const BoxDecoration(
-              color: Color(0xFF4F46E5),
+              color: AppColors.primary,
               borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Row(
@@ -152,7 +153,7 @@ class _ChatbotPanelState extends State<_ChatbotPanel> {
                     margin: const EdgeInsets.symmetric(vertical: 6),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: isUser ? const Color(0xFF2563EB) : Colors.white,
+                    color: isUser ? AppColors.primary : Colors.white,
                       borderRadius: BorderRadius.circular(12),
                       border: isUser ? null : Border.all(color: const Color(0xFFE2E8F0)),
                       boxShadow: isUser
@@ -204,7 +205,7 @@ class _ChatbotPanelState extends State<_ChatbotPanel> {
                 const SizedBox(width: 8),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2563EB),
+                    backgroundColor: AppColors.primary,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
