@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 
+const Color uniGuideTeal = Color(0xFF157A94);
+
 ThemeData getApplicationTheme() {
   return ThemeData(
     useMaterial3: true,
 
     colorScheme: ColorScheme.fromSeed(
-      seedColor: Colors.blue,
+      seedColor: uniGuideTeal,
       brightness: Brightness.light,
     ),
 
-    // Use bundled Inter font (see pubspec.yaml)
     fontFamily: "Inter",
 
     scaffoldBackgroundColor: Colors.grey.shade100,
@@ -17,7 +18,7 @@ ThemeData getApplicationTheme() {
     appBarTheme: const AppBarTheme(
       centerTitle: true,
       elevation: 0,
-      backgroundColor: Colors.blueAccent,
+      backgroundColor: uniGuideTeal,
       foregroundColor: Colors.white,
       titleTextStyle: TextStyle(
         fontSize: 20,
@@ -52,7 +53,7 @@ ThemeData getApplicationTheme() {
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide: const BorderSide(
-          color: Colors.blue,
+          color: uniGuideTeal,
           width: 2,
         ),
       ),
@@ -68,13 +69,13 @@ ThemeData getApplicationTheme() {
 
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.blue,
+        backgroundColor: uniGuideTeal,
         foregroundColor: Colors.white,
         textStyle: const TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w500,
-        fontFamily: "Inter",
-      ),
+          fontFamily: "Inter",
+        ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(6),
         ),
@@ -83,8 +84,8 @@ ThemeData getApplicationTheme() {
 
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       backgroundColor: Colors.white,
-      selectedItemColor: Colors.blue,
-      unselectedItemColor: Colors.blue,
+      selectedItemColor: uniGuideTeal,
+      unselectedItemColor: Colors.grey,
       selectedLabelStyle: TextStyle(
         fontWeight: FontWeight.w600,
         fontSize: 12,
@@ -97,12 +98,11 @@ ThemeData getApplicationTheme() {
     ),
   );
 }
-
 ThemeData getDarkTheme() {
   return ThemeData(
     useMaterial3: true,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: Colors.blue,
+      seedColor: uniGuideTeal,
       brightness: Brightness.dark,
     ),
     fontFamily: "Inter",
@@ -134,28 +134,31 @@ ThemeData getDarkTheme() {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Colors.blue, width: 2),
+        borderSide: const BorderSide(color: uniGuideTeal, width: 2),
       ),
       labelStyle: const TextStyle(color: Colors.white, fontSize: 14),
       hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.blue,
+        backgroundColor: uniGuideTeal,
         foregroundColor: Colors.white,
         textStyle: const TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w500,
           fontFamily: "Inter",
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(6),
+        ),
       ),
     ),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
       backgroundColor: Colors.grey.shade900,
-      selectedItemColor: Colors.blue,
+      selectedItemColor: uniGuideTeal,
       unselectedItemColor: Colors.grey.shade400,
-      selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+      selectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w600, fontSize: 12),
       unselectedLabelStyle: const TextStyle(fontSize: 12),
       type: BottomNavigationBarType.fixed,
       elevation: 8,
