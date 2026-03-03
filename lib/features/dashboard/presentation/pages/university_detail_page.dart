@@ -53,15 +53,25 @@ class UniversityDetailPage extends StatelessWidget {
                           logo,
                           width: 50,
                           height: 50,
+                          placeholderBuilder: (_) =>
+                              const Icon(Icons.school, size: 32, color: Colors.grey),
                         ),
                       )
                     : CircleAvatar(
                         radius: 40,
                         backgroundColor: const Color(0xFFE2E8F0),
-                        backgroundImage: logo != null ? NetworkImage(logo) : null,
-                        child: logo == null
-                            ? const Icon(Icons.school, size: 40)
-                            : null,
+                        child: logo != null
+                            ? ClipOval(
+                                child: Image.network(
+                                  logo,
+                                  width: 80,
+                                  height: 80,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) =>
+                                      const Icon(Icons.school, size: 32, color: Colors.grey),
+                                ),
+                              )
+                            : const Icon(Icons.school, size: 40),
                       ),
                 const SizedBox(width: 16),
                 Expanded(
