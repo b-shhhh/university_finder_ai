@@ -401,127 +401,139 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           const SizedBox(height: 12),
                           _HeroSection(stats: stats),
                           const SizedBox(height: 16),
-            if (loading)
-              const Padding(
-                padding: EdgeInsets.all(12),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else ...[
-                            _HorizontalSection(
-                              title: 'Countries',
-                              subtitle: '${countryCounts.length} total',
-                              itemHeight: 156,
-                              children: countryCounts
-                                  .map(
-                                    (c) => CountryCard(
-                                      name: c.key,
-                                      universityCount: c.value,
-                                      flagUrl: _flagForCountry(universities, c.key),
-                                      onTap: () => _showUniversitiesForCountry(c.key),
-                                    ),
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            child: loading
+                                ? const Padding(
+                                    key: ValueKey('loading'),
+                                    padding: EdgeInsets.all(12),
+                                    child: Center(child: CircularProgressIndicator()),
                                   )
-                                  .toList(),
-                            ),
-                            const SizedBox(height: 12),
-                            _HorizontalSection(
-                              title: 'Courses',
-                              subtitle: '${courseCounts.length} total',
-                              itemHeight: 140,
-                              children: courseCounts
-                                  .map((c) => CourseCard(
-                                        name: c.key,
-                                        universityCount: c.value,
-                                        countries: courseCountries[c.key]?.toList() ?? [],
-                                        onCountryTap: (country) {
-                                          // Show universities for this course and country
-                                          final filteredUnis = universities.where((u) {
-                                            final uniCountry = (u['country'] ?? '').toString().trim();
-                                            final uniCourses = _coursesOf(u);
-                                            return uniCountry == country && uniCourses.contains(c.key);
-                                          }).toList();
-
-                                          if (filteredUnis.isNotEmpty) {
-                                            showModalBottomSheet(
-                                              context: context,
-                                              shape: const RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+                                : Column(
+                                    key: const ValueKey('content'),
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      _HorizontalSection(
+                                        title: 'Countries',
+                                        subtitle: '${countryCounts.length} total',
+                                        itemHeight: 156,
+                                        children: countryCounts
+                                            .map(
+                                              (c) => CountryCard(
+                                                name: c.key,
+                                                universityCount: c.value,
+                                                flagUrl: _flagForCountry(universities, c.key),
+                                                onTap: () => _showUniversitiesForCountry(c.key),
                                               ),
-                                              isScrollControlled: true,
-                                              builder: (_) => DraggableScrollableSheet(
-                                                expand: false,
-                                                initialChildSize: 0.7,
-                                                minChildSize: 0.5,
-                                                maxChildSize: 0.9,
-                                                builder: (_, controller) => SafeArea(
-                                                  child: Padding(
-                                                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                                                    child: Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                      children: [
-                                                        Text(
-                                                          '${c.key} in $country',
-                                                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                                            )
+                                            .toList(),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      _HorizontalSection(
+                                        title: 'Courses',
+                                        subtitle: '${courseCounts.length} total',
+                                        itemHeight: 140,
+                                        children: courseCounts
+                                            .map((c) => CourseCard(
+                                                  name: c.key,
+                                                  universityCount: c.value,
+                                                  countries: courseCountries[c.key]?.toList() ?? [],
+                                                  onCountryTap: (country) {
+                                                    // Show universities for this course and country
+                                                    final filteredUnis = universities.where((u) {
+                                                      final uniCountry = (u['country'] ?? '').toString().trim();
+                                                      final uniCourses = _coursesOf(u);
+                                                      return uniCountry == country && uniCourses.contains(c.key);
+                                                    }).toList();
+
+                                                    if (filteredUnis.isNotEmpty) {
+                                                      showModalBottomSheet(
+                                                        context: context,
+                                                        shape: const RoundedRectangleBorder(
+                                                          borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
                                                         ),
-                                                        const SizedBox(height: 8),
-                                                        Text('${filteredUnis.length} universities found'),
-                                                        const SizedBox(height: 16),
-                                                        Expanded(
-                                                          child: ListView.builder(
-                                                            controller: controller,
-                                                            itemCount: filteredUnis.length,
-                                                            itemBuilder: (context, index) {
-                                                              final uni = filteredUnis[index];
-                                                              return ListTile(
-                                                                leading: const Icon(Icons.school),
-                                                                title: Text(uni['name'] ?? 'Unknown University'),
-                                                                subtitle: Text(uni['city'] ?? ''),
-                                                                trailing: const Icon(Icons.chevron_right),
-                                                                onTap: () {
-                                                                  Navigator.pop(context);
-                                                                  Navigator.push(
-                                                                    context,
-                                                                    MaterialPageRoute(
-                                                                      builder: (_) => UniversityDetailPage(
-                                                                        university: uni,
-                                                                        isSaved: savedIds.contains(uni['id']?.toString()),
-                                                                        onSaveToggle: () => _toggleSave(uni),
-                                                                      ),
+                                                        isScrollControlled: true,
+                                                        builder: (_) => DraggableScrollableSheet(
+                                                          expand: false,
+                                                          initialChildSize: 0.7,
+                                                          minChildSize: 0.5,
+                                                          maxChildSize: 0.9,
+                                                          builder: (_, controller) => SafeArea(
+                                                            child: Padding(
+                                                              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                                                              child: Column(
+                                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                                children: [
+                                                                  Text(
+                                                                    '${c.key} in $country',
+                                                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                                                                  ),
+                                                                  const SizedBox(height: 8),
+                                                                  Text('${filteredUnis.length} universities found'),
+                                                                  const SizedBox(height: 16),
+                                                                  Expanded(
+                                                                    child: ListView.builder(
+                                                                      controller: controller,
+                                                                      itemCount: filteredUnis.length,
+                                                                      itemBuilder: (context, index) {
+                                                                        final uni = filteredUnis[index];
+                                                                        return ListTile(
+                                                                          leading: const Icon(Icons.school),
+                                                                          title: Text(uni['name'] ?? 'Unknown University'),
+                                                                          subtitle: Text(uni['city'] ?? ''),
+                                                                          trailing: const Icon(Icons.chevron_right),
+                                                                          onTap: () {
+                                                                            Navigator.pop(context);
+                                                                            Navigator.push(
+                                                                              context,
+                                                                              MaterialPageRoute(
+                                                                                builder: (_) => UniversityDetailPage(
+                                                                                  university: uni,
+                                                                                  isSaved: savedIds.contains(uni['id']?.toString()),
+                                                                                  onSaveToggle: () => _toggleSave(uni),
+                                                                                ),
+                                                                              ),
+                                                                            );
+                                                                          },
+                                                                        );
+                                                                      },
                                                                     ),
-                                                                  );
-                                                                },
-                                                              );
-                                                            },
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
                                                           ),
                                                         ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ),
+                                                      );
+                                                    }
+                                                  },
+                                                ))
+                                            .toList(),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      AnimatedSwitcher(
+                                        duration: const Duration(milliseconds: 300),
+                                        child: _UniversitiesGrid(
+                                          key: ValueKey(filteredUniversities.length),
+                                          universities: filteredUniversities.take(6).toList(),
+                                          onUniversityTap: (university) => Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => UniversityDetailPage(
+                                                university: university,
+                                                isSaved: savedIds.contains(university['id']?.toString()),
+                                                onSaveToggle: () => _toggleSave(university),
                                               ),
-                                            );
-                                          }
-                                        },
-                                      ))
-                                  .toList(),
-                            ),
-                            const SizedBox(height: 16),
-                            _UniversitiesGrid(
-                              universities: filteredUniversities.take(6).toList(),
-                              onUniversityTap: (university) => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => UniversityDetailPage(
-                                    university: university,
-                                    isSaved: savedIds.contains(university['id']?.toString()),
-                                    onSaveToggle: () => _toggleSave(university),
+                                            ),
+                                          ),
+                                          savedIds: savedIds,
+                                          onSave: _toggleSave,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                    ],
                                   ),
-                                ),
-                              ),
-                              savedIds: savedIds,
-                              onSave: _toggleSave,
-                            ),
-                            const SizedBox(height: 16),
-                          ],
+                          ),
                         ],
                       ),
                     ),
@@ -752,6 +764,7 @@ class _HorizontalSection extends StatelessWidget {
 
 class _UniversitiesGrid extends StatelessWidget {
   const _UniversitiesGrid({
+    super.key,
     required this.universities,
     required this.onUniversityTap,
     required this.savedIds,
