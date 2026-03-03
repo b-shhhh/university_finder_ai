@@ -42,6 +42,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Set<String> savedIds = {};
   Map<String, Set<String>> courseCountries = {};
   Map<String, Set<String>> countryCourses = {};
+  final _random = math.Random();
 
   @override
   void initState() {
@@ -593,6 +594,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (loading) return;
     await _load(); // ensure fresh data pulled before notifying
     if (!mounted) return;
+    _shuffleUniversities();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Shake detected — universities refreshed')),
     );
@@ -602,9 +604,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (loading) return;
     await _load(); // reload data on tilt
     if (!mounted) return;
+    _shuffleUniversities();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Tilt detected — universities refreshed')),
     );
+  }
+
+  void _shuffleUniversities() {
+    // Simple shuffle to surface new cards after sensor-triggered refreshes.
+    universities.shuffle(_random);
+    setState(() {});
   }
 }
 
