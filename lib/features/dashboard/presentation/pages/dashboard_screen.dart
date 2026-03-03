@@ -30,8 +30,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _navIndex = 0;
   StreamSubscription<AccelerometerEvent>? _accelSub;
   DateTime? _lastShake;
+  DateTime? _lastTilt;
   static const int _shakeCooldownMs = 1500;
+  static const int _tiltCooldownMs = 2000;
   static const double _shakeThreshold = 15; // m/s^2 magnitude
+  static const double _tiltThreshold = 7; // m/s^2 on any horizontal axis
 
   List<Map<String, dynamic>> universities = [];
   List<String> courses = [];
@@ -566,11 +569,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _checkShake(AccelerometerEvent e) {
     final magnitude = math.sqrt(e.x * e.x + e.y * e.y + e.z * e.z);
     final now = DateTime.now();
+    // Strong shake detection
     if (magnitude > _shakeThreshold &&
         (_lastShake == null ||
             now.difference(_lastShake!).inMilliseconds > _shakeCooldownMs)) {
       _lastShake = now;
       _triggerShakeRefresh();
+      return;
+    }
+
+    // Tilt detection (device significantly angled on X or Y)
+    final tilted =
+        e.x.abs() > _tiltThreshold || e.y.abs() > _tiltThreshold;
+    if (tilted &&
+        (_lastTilt == null ||
+            now.difference(_lastTilt!).inMilliseconds > _tiltCooldownMs)) {
+      _lastTilt = now;
+      _triggerTiltRefresh();
     }
   }
 
@@ -580,6 +595,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Shake detected — universities refreshed')),
+    );
+  }
+
+  Future<void> _triggerTiltRefresh() async {
+    if (loading) return;
+    await _load(); // reload data on tilt
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Tilt detected — universities refreshed')),
     );
   }
 }
