@@ -75,7 +75,9 @@ class _SavedPageState extends State<SavedPage> {
 
       // Fetch missing ones from API.
       final missing = savedIds.where(
-        (id) => universities.every((u) => _resolveId(u) != id),
+        (id) =>
+            !id.startsWith('csv-') && // skip offline CSV placeholders
+            universities.every((u) => _resolveId(u) != id),
       );
 
       final fetched = await Future.wait(
@@ -102,6 +104,14 @@ class _SavedPageState extends State<SavedPage> {
   }
 
   Future<void> remove(String id) async {
+    if (id.startsWith('csv-')) {
+      // Local-only; just drop it client-side.
+      savedIds.remove(id);
+      universities.removeWhere((u) => _resolveId(u) == id);
+      widget.onSavedChanged?.call(savedIds);
+      setState(() {});
+      return;
+    }
     try {
       await ApiClient.I.delete("${ApiEndpoints.savedUniversities}/$id");
       savedIds.remove(id);

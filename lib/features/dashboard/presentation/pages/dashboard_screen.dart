@@ -57,6 +57,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ]);
 
       final uniRes = results[0];
+      // Fail fast to offline data if server unreachable
+      if ((uniRes.statusCode ?? 0) == 504) {
+        await _loadFromCsvFallback();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Using offline data (server unreachable)')),
+          );
+          setState(() => loading = false);
+        }
+        return;
+      }
       final courseRes = results[1];
       final savedRes = results[2];
 
@@ -217,7 +228,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _toggleSave(Map<String, dynamic> university) async {
     final id = university['id']?.toString();
-    if (id == null) return;
+    if (id == null || id.startsWith('csv-')) {
+      // Offline CSV entries cannot be saved to server.
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Offline entries cannot be saved.')),
+      );
+      return;
+    }
 
     final isCurrentlySaved = savedIds.contains(id);
     try {

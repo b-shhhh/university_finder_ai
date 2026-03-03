@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/usecases/upload_profile_image.dart';
 import '../state/profile_state.dart';
 import 'package:flutter_riverpod/legacy.dart';

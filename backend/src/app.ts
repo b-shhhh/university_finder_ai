@@ -18,6 +18,7 @@ import recommendationRoutes from "./routes/recommendation.route";
 import adminRoutes from "./routes/admin/admin.route";
 import adminUniversityRoutes from "./routes/admin/university.route";
 import adminUserRoutes from "./routes/admin/user.route";
+import chatbotRoutes from "./routes/chatbot.route";
 
 // Middlewares
 import { errorMiddleware } from "./middlewares/error.middleware";
@@ -45,13 +46,15 @@ app.use("/uploads", express.static(uploadDir));
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
-// Connect to MongoDB
-connectDatabase()
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => {
-    console.error("MongoDB connection failed:", err);
-    process.exit(1);
-  });
+// Connect to MongoDB (skip during test runs)
+if (process.env.NODE_ENV !== "test") {
+  connectDatabase()
+    .then(() => console.log("MongoDB connected"))
+    .catch((err) => {
+      console.error("MongoDB connection failed:", err);
+      process.exit(1);
+    });
+}
 
 app.get("/health", (_req, res) => {
   res.status(200).json({ success: true, status: "ok", uptime: process.uptime() });
@@ -75,6 +78,7 @@ app.use("/api/recommendations", recommendationRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/admin/universities", adminUniversityRoutes);
 app.use("/api/admin/users", adminUserRoutes);
+app.use("/api/chatbot", chatbotRoutes);
 
 // 404 handler
 app.use((_req, res) => {

@@ -29,8 +29,9 @@ class ApiClient {
       BaseOptions(
         baseUrl: baseUrl,
         // Balanced: tolerant of cold starts without 25s noise.
-        connectTimeout: const Duration(seconds: 20),
-        receiveTimeout: const Duration(seconds: 45),
+        connectTimeout: const Duration(seconds: 8),
+        receiveTimeout: const Duration(seconds: 20),
+        sendTimeout: const Duration(seconds: 10),
         responseType: ResponseType.json,
       ),
     );
@@ -58,11 +59,8 @@ class ApiClient {
       RetryInterceptor(
         dio: dio,
         logPrint: (obj) {},
-        retries: 2,
-        retryDelays: const [
-          Duration(milliseconds: 400),
-          Duration(seconds: 1),
-        ],
+        retries: 1,
+        retryDelays: const [Duration(milliseconds: 300)],
         retryEvaluator: (error, attempt) {
           final method = error.requestOptions.method.toUpperCase();
           final isIdempotent = method == 'GET' || method == 'HEAD';
@@ -90,34 +88,27 @@ class ApiClient {
 
   static List<String> _buildBaseCandidates() {
     const base = ApiEndpoints.baseUrl;
-    const emulatorOverride = String.fromEnvironment('API_BASE_URL_EMULATOR', defaultValue: '');
-    const hostOverride = String.fromEnvironment('API_BASE_URL', defaultValue: '');
+    const override = String.fromEnvironment('API_BASE_URL', defaultValue: '');
 
     final candidates = <String>[];
-    void add(String v) {
+    void addIfMissing(String v) {
       if (v.isNotEmpty && !candidates.contains(v)) candidates.add(v);
     }
 
-    // Highest priority: explicit overrides
-    add(hostOverride);
-    add(base);
-
     if (!kIsWeb && Platform.isAndroid) {
-      add(emulatorOverride);
-
+      // Prefer emulator loopback first to avoid LAN timeouts.
+      addIfMissing('http://10.0.2.2:5050/api');
+      // If override provided, keep it next.
+      if (override.isNotEmpty) addIfMissing(override);
+      // Last, the base URL.
+      addIfMissing(base);
       if (base.contains('localhost') || base.contains('127.0.0.1')) {
-        add(base.replaceFirst(RegExp(r'localhost|127\.0\.0\.1'), '10.0.2.2'));
+        addIfMissing(base.replaceFirst(RegExp(r'localhost|127\\.0\\.0\\.1'), '10.0.2.2'));
       }
-
-      // direct emulator loopback commonly used
-      add('http://10.0.2.2:5050/api');
+    } else {
+      if (override.isNotEmpty) addIfMissing(override);
+      addIfMissing(base);
     }
-
-    // Common LAN fallbacks (adjust to your network; harmless if unreachable)
-    add('http://192.168.1.6:5050/api');
-    add('http://192.168.1.3:5050/api');
-    add('http://localhost:5050/api');
-
     return candidates;
   }
 

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:Uniguide/app/theme/app_colors.dart';
 import '../../../../core/api/api_client.dart';
+import '../../../../core/api/api_endpoints.dart';
+import '../pages/university_detail_page.dart';
 
 /// Chatbot UI that calls backend `/api/chatbot`.
 void showDashboardChatbot(
@@ -39,19 +41,24 @@ class _ChatbotPanel extends StatefulWidget {
 
 class _ChatbotPanelState extends State<_ChatbotPanel> {
   final _inputCtrl = TextEditingController();
-  final List<_Message> _messages = const [
-    _Message(
-      sender: Sender.bot,
-      text:
-          'Try: “Universities in Canada that accept IELTS 6.5” or “MBA in Germany with SAT optional”.',
-    ),
-  ];
+  final List<_Message> _messages = <_Message>[];
   bool _loading = false;
 
   @override
   void dispose() {
     _inputCtrl.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Seed with a friendly example message.
+    _messages.add(const _Message(
+      sender: Sender.bot,
+      text:
+          'Try: "Universities in Canada that accept IELTS 6.5" or "MBA in Germany with SAT optional".',
+    ));
   }
 
   Future<void> _send() async {
@@ -80,7 +87,15 @@ class _ChatbotPanelState extends State<_ChatbotPanel> {
       final data = res.data;
       final reply =
           data is Map ? (data['reply'] ?? data['message'] ?? data.toString()) : data.toString();
-      _messages.add(_Message(sender: Sender.bot, text: reply));
+      final universities = data is Map && data['universities'] is List
+          ? List<Map<String, dynamic>>.from(data['universities'].whereType<Map>())
+          : <Map<String, dynamic>>[];
+
+      _messages.add(_Message(
+        sender: Sender.bot,
+        text: reply,
+        universities: universities,
+      ));
     } catch (_) {
       _messages.add(const _Message(
         sender: Sender.bot,
@@ -88,6 +103,33 @@ class _ChatbotPanelState extends State<_ChatbotPanel> {
       ));
     }
     setState(() {});
+  }
+
+  Future<void> _openUniversity(Map<String, dynamic> uni) async {
+    Map<String, dynamic> detail = uni;
+    final id = (uni['id'] ?? uni['_id'] ?? uni['sourceId'])?.toString();
+    if (id != null && id.isNotEmpty) {
+      try {
+        final res = await ApiClient.I.get("${ApiEndpoints.universities}/$id");
+        final data = res.data is Map ? (res.data['data'] ?? res.data) : res.data;
+        if (data is Map) {
+          detail = Map<String, dynamic>.from(data);
+        }
+      } catch (_) {
+        // fall back to provided data if detail fetch fails
+      }
+    }
+
+    if (!mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => UniversityDetailPage(
+          university: detail,
+          isSaved: false,
+          onSaveToggle: null,
+        ),
+      ),
+    );
   }
 
   @override
@@ -149,31 +191,52 @@ class _ChatbotPanelState extends State<_ChatbotPanel> {
                 final isUser = m.sender == Sender.user;
                 return Align(
                   alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 6),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                    color: isUser ? AppColors.primary : Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: isUser ? null : Border.all(color: const Color(0xFFE2E8F0)),
-                      boxShadow: isUser
-                          ? null
-                          : [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.04),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              )
-                            ],
-                    ),
-                    child: Text(
-                      m.text,
-                      style: TextStyle(
-                        color: isUser ? Colors.white : Colors.black87,
-                        fontSize: 13,
-                        height: 1.35,
+                  child: Column(
+                    crossAxisAlignment:
+                        isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.symmetric(vertical: 6),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isUser ? AppColors.primary : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: isUser ? null : Border.all(color: const Color(0xFFE2E8F0)),
+                          boxShadow: isUser
+                              ? null
+                              : [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.04),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  )
+                                ],
+                        ),
+                        child: Text(
+                          m.text,
+                          style: TextStyle(
+                            color: isUser ? Colors.white : Colors.black87,
+                            fontSize: 13,
+                            height: 1.35,
+                          ),
+                        ),
                       ),
-                    ),
+                      if (m.universities.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: m.universities
+                                .map(
+                                  (u) => _UniCard(
+                                    university: u,
+                                    onTap: () => _openUniversity(u),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ),
+                    ],
                   ),
                 );
               },
@@ -228,5 +291,76 @@ enum Sender { user, bot }
 class _Message {
   final Sender sender;
   final String text;
-  const _Message({required this.sender, required this.text});
+  final List<Map<String, dynamic>> universities;
+
+  const _Message({
+    required this.sender,
+    required this.text,
+    this.universities = const [],
+  });
+}
+
+class _UniCard extends StatelessWidget {
+  const _UniCard({required this.university, required this.onTap});
+
+  final Map<String, dynamic> university;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = (university['name'] ?? 'University').toString();
+    final country = (university['country'] ?? '').toString();
+    final degreeLevels = (university['degreeLevels'] is List)
+        ? (university['degreeLevels'] as List).whereType<String>().join(', ')
+        : '';
+    final ielts = university['ieltsMin']?.toString() ?? 'N/A';
+    final sat = university['satRequired'] == true
+        ? (university['satMin']?.toString() ?? 'N/A')
+        : (university['satRequired'] == false ? 'Optional' : 'N/A');
+
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    if (country.isNotEmpty)
+                      Text(country, style: const TextStyle(color: Colors.black54)),
+                    if (degreeLevels.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Text('• $degreeLevels',
+                          style: const TextStyle(color: Colors.black54)),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'IELTS $ielts · SAT $sat',
+                  style: const TextStyle(color: Colors.black54, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
