@@ -21,6 +21,15 @@ void main() {
     password: 'Secret123',
   );
 
+  setUpAll(() {
+    registerFallbackValue(AuthEntity(
+      id: 'fallback',
+      fullName: 'Fallback',
+      email: 'fallback@example.com',
+      phone: '0',
+    ));
+  });
+
   setUp(() {
     repository = _MockAuthRepository();
     useCase = RegisterUseCase(repository: repository);
