@@ -113,8 +113,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _load({bool background = false}) async {
-    final shouldShowSpinner = !background && mounted;
-    if (shouldShowSpinner) setState(() => loading = true);
+    final shouldToggleLoading = !background || loading;
+    if (!background && mounted) setState(() => loading = true);
     try {
       final results = await Future.wait([
         _getWithTimeout(ApiEndpoints.universities),
@@ -195,7 +195,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
       }
     } finally {
-      if (mounted && shouldShowSpinner) setState(() => loading = false);
+      if (mounted && shouldToggleLoading) setState(() => loading = false);
     }
   }
 
@@ -669,24 +669,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _triggerShakeRefresh() async {
     if (loading) return;
+    final now = DateTime.now();
+    if (_lastNetworkFetch != null &&
+        now.difference(_lastNetworkFetch!).inMinutes < 5) {
+      _shuffleUniversities();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Shake detected ? refreshed from cache')),
+      );
+      return;
+    }
     await _load(); // ensure fresh data pulled before notifying
     if (!mounted) return;
     _shuffleUniversities();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Shake detected — universities refreshed')),
+      const SnackBar(content: Text('Shake detected ? universities refreshed')),
     );
   }
 
   Future<void> _triggerTiltRefresh() async {
     if (loading) return;
+    final now = DateTime.now();
+    if (_lastNetworkFetch != null &&
+        now.difference(_lastNetworkFetch!).inMinutes < 5) {
+      _shuffleUniversities();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tilt detected ? refreshed from cache')),
+      );
+      return;
+    }
     await _load(); // reload data on tilt
     if (!mounted) return;
     _shuffleUniversities();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Tilt detected — universities refreshed')),
+      const SnackBar(content: Text('Tilt detected ? universities refreshed')),
     );
   }
-
   void _shuffleUniversities() {
     // Simple shuffle to surface new cards after sensor-triggered refreshes.
     universities.shuffle(_random);
