@@ -40,7 +40,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   static const int _shakeCooldownMs = 1500;
   static const int _tiltCooldownMs = 2000;
   static const double _shakeThreshold = 15; // m/s^2 magnitude
-  static const double _tiltThreshold = 7; // m/s^2 on any horizontal axis
+  static const double _tiltThreshold = 11; // tighter to reduce false positives
   static const _cacheKey = 'dashboard_cache_v1';
 
   List<Map<String, dynamic>> universities = [];
@@ -783,8 +783,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     // Tilt detection (device significantly angled on X or Y)
-    final tilted =
-        e.x.abs() > _tiltThreshold || e.y.abs() > _tiltThreshold;
+    final tiltAxis = math.max(e.x.abs(), e.y.abs());
+    final tilted = tiltAxis > _tiltThreshold && (tiltAxis - _tiltThreshold) > 1.5;
     if (tilted &&
         (_lastTilt == null ||
             now.difference(_lastTilt!).inMilliseconds > _tiltCooldownMs)) {
@@ -814,6 +814,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _triggerTiltRefresh() async {
     if (loading) return;
+    // Ignore tiny tilts by requiring a recent network fetch gap check too
     final now = DateTime.now();
     if (_lastNetworkFetch != null &&
         now.difference(_lastNetworkFetch!).inMinutes < 5) {
