@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:Uniguide/app/theme/app_colors.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dio/dio.dart';
 
 import '../../../../core/api/api_client.dart';
 import '../../../../core/api/api_endpoints.dart';
@@ -31,10 +34,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   StreamSubscription<AccelerometerEvent>? _accelSub;
   DateTime? _lastShake;
   DateTime? _lastTilt;
+  DateTime? _lastNetworkFetch;
   static const int _shakeCooldownMs = 1500;
   static const int _tiltCooldownMs = 2000;
   static const double _shakeThreshold = 15; // m/s^2 magnitude
   static const double _tiltThreshold = 7; // m/s^2 on any horizontal axis
+  static const _cacheKey = 'dashboard_cache_v1';
 
   List<Map<String, dynamic>> universities = [];
   List<String> courses = [];
@@ -47,17 +52,74 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _load();
+    _loadCached();
+    _load(background: true);
     _accelSub = accelerometerEvents.listen(_checkShake);
   }
 
-  Future<void> _load() async {
-    setState(() => loading = true);
+  Future<void> _loadCached() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_cacheKey);
+      if (raw == null) return;
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      final cachedUnis = ((data['universities'] as List?) ?? [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+      final cachedCourses = List<String>.from(data['courses'] ?? const []);
+      final cachedCountries = List<String>.from(data['countries'] ?? const []);
+      final cachedSaved = Set<String>.from(data['savedIds'] ?? const []);
+
+      setState(() {
+        universities = cachedUnis;
+        courses = cachedCourses;
+        countries = cachedCountries;
+        savedIds = cachedSaved;
+        loading = false;
+      });
+      _recomputeMappings();
+    } catch (_) {
+      // Ignore cache errors silently
+    }
+  }
+
+  Future<void> _saveCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final payload = jsonEncode({
+        'universities': universities,
+        'courses': courses,
+        'countries': countries,
+        'savedIds': savedIds.toList(),
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+      await prefs.setString(_cacheKey, payload);
+    } catch (_) {
+      // Ignore cache save failures
+    }
+  }
+
+  Future<Response<dynamic>> _getWithTimeout(String path) async {
+    return ApiClient.I
+        .get(path)
+        .timeout(
+          const Duration(seconds: 7),
+          onTimeout: () => Response(
+            requestOptions: RequestOptions(path: path),
+            statusCode: 504,
+            data: {'message': 'request timeout'},
+          ),
+        );
+  }
+
+  Future<void> _load({bool background = false}) async {
+    final shouldShowSpinner = !background && mounted;
+    if (shouldShowSpinner) setState(() => loading = true);
     try {
       final results = await Future.wait([
-        ApiClient.I.get(ApiEndpoints.universities),
-        ApiClient.I.get(ApiEndpoints.courses),
-        ApiClient.I.get(ApiEndpoints.savedUniversities),
+        _getWithTimeout(ApiEndpoints.universities),
+        _getWithTimeout(ApiEndpoints.courses),
+        _getWithTimeout(ApiEndpoints.savedUniversities),
       ]);
 
       final uniRes = results[0];
@@ -122,6 +184,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         await _loadFromCsvFallback();
       } else {
         _recomputeMappings();
+        _lastNetworkFetch = DateTime.now();
+        await _saveCache();
       }
     } catch (e) {
       await _loadFromCsvFallback();
@@ -131,7 +195,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted && shouldShowSpinner) setState(() => loading = false);
     }
   }
 
@@ -144,6 +208,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     courses = loader.courses;
     countries = loader.countries;
     _recomputeMappings();
+    await _saveCache();
   }
 
   Map<String, dynamic> _normalizeUniversity(Map<String, dynamic> uni) {
