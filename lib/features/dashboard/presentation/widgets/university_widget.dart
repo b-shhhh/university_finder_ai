@@ -8,6 +8,7 @@ class UniversityCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onSave;
   final bool isSaved;
+  final bool isOnline;
 
   const UniversityCard({
     super.key,
@@ -15,6 +16,7 @@ class UniversityCard extends StatelessWidget {
     this.onTap,
     this.onSave,
     this.isSaved = false,
+    this.isOnline = true,
   });
 
   @override
@@ -115,6 +117,10 @@ class UniversityCard extends StatelessWidget {
 
   /// Builds university logo avatar
   Widget _buildAvatar(Object? logo) {
+    if (!isOnline) {
+      return _initialsAvatar();
+    }
+
     if (logo != null && logo.toString().trim().isNotEmpty) {
       final url = logo.toString();
       final pngUrl = _asPng(url);
@@ -163,11 +169,7 @@ class UniversityCard extends StatelessWidget {
     }
 
     // Fallback icon
-    return const CircleAvatar(
-      radius: 24,
-      backgroundColor: Color(0xFFE2E8F0),
-      child: Icon(Icons.school, color: Colors.grey),
-    );
+    return _initialsAvatar();
   }
 
   String? _asPng(String url) {
@@ -178,6 +180,26 @@ class UniversityCard extends StatelessWidget {
       return 'https://flagcdn.com/w80/${filename.toLowerCase()}.png';
     }
     return null;
+  }
+
+  Widget _initialsAvatar() {
+    final name = (university['name'] ?? '').toString().trim();
+    final initials = name.isNotEmpty
+        ? name
+            .split(RegExp(r'\s+'))
+            .where((p) => p.isNotEmpty)
+            .take(2)
+            .map((p) => p[0].toUpperCase())
+            .join()
+        : 'U';
+    return CircleAvatar(
+      radius: 24,
+      backgroundColor: const Color(0xFFE2E8F0),
+      child: Text(
+        initials,
+        style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.black87),
+      ),
+    );
   }
 
   /// Opens website externally

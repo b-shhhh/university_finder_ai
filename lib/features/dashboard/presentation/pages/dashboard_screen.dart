@@ -741,6 +741,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                           key: ValueKey(filteredUniversities.length),
                                           // Show a concise sample (max 6) to keep the dashboard tight
                                           universities: filteredUniversities.take(6).toList(),
+                                          isOnline: _isOnline,
                                           onUniversityTap: (university) => Navigator.push(
                                             context,
                                             MaterialPageRoute(
@@ -1032,12 +1033,14 @@ class _UniversitiesGrid extends StatelessWidget {
     required this.onUniversityTap,
     required this.savedIds,
     required this.onSave,
+    required this.isOnline,
   });
 
   final List<Map<String, dynamic>> universities;
   final void Function(Map<String, dynamic>) onUniversityTap;
   final Set<String> savedIds;
   final void Function(Map<String, dynamic>) onSave;
+  final bool isOnline;
 
   @override
   Widget build(BuildContext context) {
@@ -1064,6 +1067,7 @@ class _UniversitiesGrid extends StatelessWidget {
             onTap: () => onUniversityTap(universities[i]),
             onSave: () => onSave(universities[i]),
             isSaved: savedIds.contains(universities[i]['id']?.toString()),
+            isOnline: isOnline,
           ),
         ),
       ],
