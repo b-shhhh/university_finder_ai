@@ -7,9 +7,6 @@ class AuthLocalDataSource {
   /// Registers a new user locally in Hive
   Future<void> registerUser(AuthHiveModel user) async {
     final box = await Hive.openBox<AuthHiveModel>(_boxName);
-    if (box.containsKey(user.email)) {
-      throw Exception('User with this email already exists');
-    }
     await box.put(user.email, user);
   }
 

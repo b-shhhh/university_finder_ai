@@ -1,8 +1,12 @@
 import 'dart:io';
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:dio/dio.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../../core/api/api_client.dart';
 import '../../../../../core/api/api_endpoints.dart';
 
@@ -24,14 +28,76 @@ class _ProfilePageState extends State<ProfilePage> {
   final _phoneCtrl = TextEditingController();
   final _countryCtrl = TextEditingController();
   final _bioCtrl = TextEditingController();
+  final _connectivity = Connectivity();
+  StreamSubscription<List<ConnectivityResult>>? _connSub;
+  bool _online = true;
+  static const _profileCacheKey = 'profile_cache_v1';
+  static const _profileQueueKey = 'profile_update_queue_v1';
 
   @override
   void initState() {
     super.initState();
+    _initConnectivity();
+    _loadProfileFromCache();
     _loadProfile();
   }
 
+  Future<void> _initConnectivity() async {
+    final initial = await _connectivity.checkConnectivity();
+    _updateConnectivity(_asList(initial));
+    _connSub = _connectivity.onConnectivityChanged.listen(_updateConnectivity);
+  }
+
+  void _updateConnectivity(List<ConnectivityResult> results) {
+    final nowOnline = results.any((r) => r != ConnectivityResult.none);
+    if (nowOnline && !_online) {
+      _flushQueuedProfile();
+      _loadProfile();
+    }
+    setState(() => _online = nowOnline);
+  }
+
+  List<ConnectivityResult> _asList(dynamic value) {
+    if (value is ConnectivityResult) return [value];
+    if (value is List<ConnectivityResult>) return value;
+    return const [];
+  }
+
+  Future<void> _loadProfileFromCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_profileCacheKey);
+      if (raw == null) return;
+      final data = Map<String, dynamic>.from((jsonDecode(raw) as Map));
+      setState(() {
+        user = data;
+        _nameCtrl.text = user['fullName'] ?? '';
+        _emailCtrl.text = user['email'] ?? '';
+        _phoneCtrl.text = user['phone'] ?? '';
+        _countryCtrl.text = user['country'] ?? '';
+        _bioCtrl.text = user['bio'] ?? '';
+        _loading = false;
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _cacheProfile(Map<String, dynamic> data) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_profileCacheKey, jsonEncode(data));
+    } catch (_) {}
+  }
+
   Future<void> _loadProfile() async {
+    if (!_online) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Offline: showing cached profile')),
+        );
+      }
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
     setState(() => _loading = true);
     try {
       final res = await ApiClient.I.get(ApiEndpoints.userProfile);
@@ -44,6 +110,7 @@ class _ProfilePageState extends State<ProfilePage> {
         _countryCtrl.text = user['country'] ?? '';
         _bioCtrl.text = user['bio'] ?? '';
       });
+      await _cacheProfile(user);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to load profile: $e')),
@@ -73,6 +140,12 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _uploadAvatar(File file) async {
+    if (!_online) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Offline: avatar upload will sync when online.')),
+      );
+      return;
+    }
     try {
       final form = FormData.fromMap({
         'profilePic': await MultipartFile.fromFile(file.path, filename: file.uri.pathSegments.last),
@@ -95,15 +168,30 @@ class _ProfilePageState extends State<ProfilePage> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
-      final res = await ApiClient.I.put(ApiEndpoints.updateProfile, data: {
+      final payload = {
         'fullName': _nameCtrl.text.trim(),
         'email': _emailCtrl.text.trim(),
         'phone': _phoneCtrl.text.trim(),
         'country': _countryCtrl.text.trim(),
         'bio': _bioCtrl.text.trim(),
-      });
+      };
+      if (!_online) {
+        user = {...user, ...payload};
+        await _cacheProfile(user);
+        await _queueProfileUpdate(payload);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Offline: profile changes cached and will sync.')),
+          );
+        }
+        if (mounted) setState(() => _loading = false);
+        return;
+      }
+
+      final res = await ApiClient.I.put(ApiEndpoints.updateProfile, data: payload);
       final updated = res.data is Map ? (res.data['data'] ?? res.data) : res.data;
       setState(() => user = Map<String, dynamic>.from(updated));
+      await _cacheProfile(user);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile saved')),
@@ -227,6 +315,17 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
     );
+  }
+
+  @override
+  void dispose() {
+    _connSub?.cancel();
+    _nameCtrl.dispose();
+    _emailCtrl.dispose();
+    _phoneCtrl.dispose();
+    _countryCtrl.dispose();
+    _bioCtrl.dispose();
+    super.dispose();
   }
 
   void _showImagePickerSheet() {
@@ -369,6 +468,28 @@ class _ProfilePageState extends State<ProfilePage> {
         );
       },
     );
+  }
+
+  Future<void> _queueProfileUpdate(Map<String, dynamic> payload) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_profileQueueKey, jsonEncode(payload));
+    } catch (_) {}
+  }
+
+  Future<void> _flushQueuedProfile() async {
+    if (!_online) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_profileQueueKey);
+      if (raw == null) return;
+      final payload = Map<String, dynamic>.from(jsonDecode(raw) as Map);
+      await ApiClient.I.put(ApiEndpoints.updateProfile, data: payload);
+      await prefs.remove(_profileQueueKey);
+      await _loadProfile();
+    } catch (_) {
+      // keep queued on failure
+    }
   }
 
   String? _resolveAvatarUrl(String? raw) {
