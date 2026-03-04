@@ -8,6 +8,7 @@ import '../pages/university_detail_page.dart';
 void showDashboardChatbot(
   BuildContext context,
   List<Map<String, dynamic>> universities, // kept for potential future use
+  {bool isOnline = true}
 ) {
   showModalBottomSheet(
     context: context,
@@ -23,7 +24,11 @@ void showDashboardChatbot(
       builder: (_, controller) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: _ChatbotPanel(scrollController: controller),
+          child: _ChatbotPanel(
+            scrollController: controller,
+            universities: universities,
+            isOnline: isOnline,
+          ),
         ),
       ),
     ),
@@ -31,9 +36,15 @@ void showDashboardChatbot(
 }
 
 class _ChatbotPanel extends StatefulWidget {
-  const _ChatbotPanel({required this.scrollController});
+  const _ChatbotPanel({
+    required this.scrollController,
+    required this.universities,
+    required this.isOnline,
+  });
 
   final ScrollController scrollController;
+  final List<Map<String, dynamic>> universities;
+  final bool isOnline;
 
   @override
   State<_ChatbotPanel> createState() => _ChatbotPanelState();
@@ -43,6 +54,7 @@ class _ChatbotPanelState extends State<_ChatbotPanel> {
   final _inputCtrl = TextEditingController();
   final List<_Message> _messages = <_Message>[];
   bool _loading = false;
+  bool get _online => widget.isOnline;
 
   @override
   void dispose() {
@@ -82,6 +94,10 @@ class _ChatbotPanelState extends State<_ChatbotPanel> {
   }
 
   Future<void> _respond(String query) async {
+    if (!_online) {
+      _answerOffline(query);
+      return;
+    }
     try {
       final res = await ApiClient.I.post('/chatbot', data: {'message': query});
       final data = res.data;
@@ -97,11 +113,29 @@ class _ChatbotPanelState extends State<_ChatbotPanel> {
         universities: universities,
       ));
     } catch (_) {
-      _messages.add(const _Message(
-        sender: Sender.bot,
-        text: 'Oops! Something went wrong reaching the assistant.',
-      ));
+      // Graceful offline-style fallback on any failure
+      _answerOffline(query);
     }
+    setState(() {});
+  }
+
+  void _answerOffline(String query) {
+    final term = query.toLowerCase();
+    final matches = widget.universities.where((u) {
+      final haystack =
+          '${u['name'] ?? ''} ${u['country'] ?? ''} ${(u['courses'] ?? []).join(' ')}'.toString().toLowerCase();
+      return haystack.contains(term);
+    }).take(6).toList();
+
+    final intro = matches.isEmpty
+        ? 'Offline mode: I could not find a match in cached data.'
+        : 'Offline mode: here are matches from cached data.';
+
+    _messages.add(_Message(
+      sender: Sender.bot,
+      text: intro,
+      universities: matches,
+    ));
     setState(() {});
   }
 

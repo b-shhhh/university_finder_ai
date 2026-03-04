@@ -778,7 +778,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _openChatbotSheet() {
-    showDashboardChatbot(context, universities);
+    showDashboardChatbot(context, universities, isOnline: _isOnline);
   }
 
   void _onNavTap(int index) {
