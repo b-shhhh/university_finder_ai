@@ -16,6 +16,7 @@ class CountryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final displayFlag = _asPng(flagUrl);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -37,9 +38,13 @@ class CountryCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              flagUrl != null && flagUrl!.isNotEmpty
+              displayFlag != null
                   ? CircleAvatar(
-                      backgroundImage: NetworkImage(flagUrl!),
+                      backgroundImage: NetworkImage(
+                        displayFlag,
+                      ),
+                      onBackgroundImageError: (_, __) {},
+                      child: const SizedBox.shrink(),
                     )
                   : const CircleAvatar(child: Icon(Icons.flag)),
               const SizedBox(width: 12),
@@ -70,5 +75,14 @@ class CountryCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String? _asPng(String? url) {
+    if (url == null || url.isEmpty) return null;
+    if (url.toLowerCase().endsWith('.svg')) {
+      final code = url.split('/').last.split('.').first.toLowerCase();
+      return 'https://flagcdn.com/w80/$code.png';
+    }
+    return url;
   }
 }

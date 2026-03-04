@@ -7,6 +7,7 @@ import '../datasources/local/auth_local_datasource.dart';
 import '../models/auth_hive_model.dart';
 import '../../../../core/api/api_client.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:dio/dio.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl({
@@ -44,12 +45,21 @@ class AuthRepositoryImpl implements AuthRepository {
       await _client.saveToken('local-${user.email}');
       return AuthResponse.success(_offlineEntity(user), message: "Registered locally (offline)");
     }
-    final AuthApiModel res = await _remote.registerUser(payload);
-    await _client.saveToken(res.token);
-    await _local.registerUser(
-      _toHive(_withPassword(user, (user.password ?? payload['password'] ?? '').toString())),
-    );
-    return AuthResponse.success(res.toEntity(), message: "Registered successfully");
+    try {
+      final AuthApiModel res = await _remote.registerUser(payload);
+      await _client.saveToken(res.token);
+      await _local.registerUser(
+        _toHive(_withPassword(user, (user.password ?? payload['password'] ?? '').toString())),
+      );
+      return AuthResponse.success(res.toEntity(), message: "Registered successfully");
+    } on DioException catch (e) {
+      if (_isConnectionIssue(e)) {
+        await _local.registerUser(_toHive(user));
+        await _client.saveToken('local-${user.email}');
+        return AuthResponse.success(_offlineEntity(user), message: "Registered locally (offline)");
+      }
+      rethrow;
+    }
   }
 
   @override
@@ -70,6 +80,17 @@ class AuthRepositoryImpl implements AuthRepository {
       final apiUser = res.toEntity();
       await _local.registerUser(_toHive(_withPassword(apiUser, password)));
       return AuthResponse.success(apiUser, message: "Logged in");
+    } on DioException catch (e) {
+      // Treat connection/timeout as offline and fallback quietly
+      if (_isConnectionIssue(e)) {
+        final local = await _local.loginUser(email, password);
+        if (local != null) {
+          await _client.saveToken('local-$email');
+          return AuthResponse.success(_fromHive(local), message: "Logged in (offline cache)");
+        }
+        return AuthResponse.failure("Offline login failed: user not found");
+      }
+      rethrow;
     } catch (e) {
       // Fallback to local if available
       final local = await _local.loginUser(email, password);
@@ -127,4 +148,12 @@ class AuthRepositoryImpl implements AuthRepository {
         token: entity.token,
         password: password,
       );
+
+  bool _isConnectionIssue(DioException e) {
+    return e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.connectionError ||
+        e.type == DioExceptionType.receiveTimeout ||
+        e.type == DioExceptionType.sendTimeout ||
+        e.type == DioExceptionType.unknown;
+  }
 }
