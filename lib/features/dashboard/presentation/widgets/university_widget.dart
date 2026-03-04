@@ -117,19 +117,28 @@ class UniversityCard extends StatelessWidget {
   Widget _buildAvatar(Object? logo) {
     if (logo != null && logo.toString().trim().isNotEmpty) {
       final url = logo.toString();
+      final pngUrl = _asPng(url);
 
       // SVG logo
       if (url.toLowerCase().endsWith('.svg')) {
         return CircleAvatar(
           radius: 24,
           backgroundColor: const Color(0xFFE2E8F0),
-          child: SvgPicture.network(
-            url,
-            width: 28,
-            height: 28,
-            placeholderBuilder: (context) =>
-                const CircularProgressIndicator(strokeWidth: 2),
-          ),
+          child: pngUrl != null
+              ? Image.network(
+                  pngUrl,
+                  width: 40,
+                  height: 40,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Icon(Icons.school, size: 20),
+                )
+              : SvgPicture.network(
+                  url,
+                  width: 28,
+                  height: 28,
+                  placeholderBuilder: (context) =>
+                      const CircularProgressIndicator(strokeWidth: 2),
+                ),
         );
       }
 
@@ -159,6 +168,16 @@ class UniversityCard extends StatelessWidget {
       backgroundColor: Color(0xFFE2E8F0),
       child: Icon(Icons.school, color: Colors.grey),
     );
+  }
+
+  String? _asPng(String url) {
+    // Convert common SVG endpoints to PNG fallback (helps offline/cache)
+    if (url.toLowerCase().endsWith('.svg')) {
+      final filename = url.split('/').last.split('.').first;
+      // attempt flagcdn-style png as a generic fallback
+      return 'https://flagcdn.com/w80/${filename.toLowerCase()}.png';
+    }
+    return null;
   }
 
   /// Opens website externally

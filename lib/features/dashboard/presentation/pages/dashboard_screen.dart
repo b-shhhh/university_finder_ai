@@ -204,6 +204,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _load({bool background = false}) async {
     final shouldToggleLoading = !background || loading;
     if (!background && mounted) setState(() => loading = true);
+
+    // Fast path for offline mode: use cached/CSV immediately with clear messaging.
+    if (!_isOnline) {
+      await _loadFromCsvFallback();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Offline: showing cached / bundled data')),
+        );
+        if (shouldToggleLoading) setState(() => loading = false);
+      }
+      return;
+    }
+
     try {
       final results = await Future.wait([
         _getWithTimeout(ApiEndpoints.universities),
@@ -561,9 +574,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
         onTap: _onNavTap,
       ),
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final scroll = RefreshIndicator(
+        child: Column(
+          children: [
+            if (!_isOnline)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                color: Colors.amber.shade100,
+                child: Row(
+                  children: const [
+                    Icon(Icons.wifi_off, size: 18),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Offline mode: showing cached / bundled data',
+                        style: TextStyle(fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final scroll = RefreshIndicator(
               onRefresh: _load,
               child: CustomScrollView(
                 slivers: [
@@ -705,6 +739,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         duration: const Duration(milliseconds: 300),
                                         child: _UniversitiesGrid(
                                           key: ValueKey(filteredUniversities.length),
+                                          // Show a concise sample (max 6) to keep the dashboard tight
                                           universities: filteredUniversities.take(6).toList(),
                                           onUniversityTap: (university) => Navigator.push(
                                             context,
@@ -733,7 +768,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             );
 
             return scroll;
-          },
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
