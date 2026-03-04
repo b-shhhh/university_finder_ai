@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:sensors_plus/sensors_plus.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:Uniguide/app/theme/app_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
@@ -32,6 +33,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String search = '';
   int _navIndex = 0;
   StreamSubscription<AccelerometerEvent>? _accelSub;
+  StreamSubscription<List<ConnectivityResult>>? _connSub;
   DateTime? _lastShake;
   DateTime? _lastTilt;
   DateTime? _lastNetworkFetch;
@@ -45,16 +47,96 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<String> courses = [];
   List<String> countries = [];
   Set<String> savedIds = {};
+  List<_QueuedSave> _queuedSaves = [];
+  bool _isOnline = true;
   Map<String, Set<String>> courseCountries = {};
   Map<String, Set<String>> countryCourses = {};
   final _random = math.Random();
+  final _connectivity = Connectivity();
 
   @override
   void initState() {
     super.initState();
+    _initConnectivity();
+    _loadQueuedSaves();
     _loadCached();
     _load(background: true);
     _accelSub = accelerometerEvents.listen(_checkShake);
+  }
+
+  Future<void> _initConnectivity() async {
+    final initial = await _connectivity.checkConnectivity();
+    _updateConnectivity(_asList(initial));
+    _connSub = _connectivity.onConnectivityChanged.listen(_updateConnectivity);
+  }
+
+  void _updateConnectivity(List<ConnectivityResult> results) {
+    final online = results.any((r) => r != ConnectivityResult.none);
+    if (online && !_isOnline) {
+      // Came online: refresh data and flush queued saves
+      _load(background: true);
+      _flushSaveQueue();
+    }
+    if (mounted) setState(() => _isOnline = online);
+  }
+
+  List<ConnectivityResult> _asList(dynamic value) {
+    if (value is ConnectivityResult) return [value];
+    if (value is List<ConnectivityResult>) return value;
+    return const [];
+  }
+
+  Future<void> _loadQueuedSaves() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('saved_queue_v1');
+      if (raw == null) return;
+      final list = (jsonDecode(raw) as List?) ?? [];
+      _queuedSaves = list
+          .map((e) => _QueuedSave.fromJson(Map<String, dynamic>.from(e as Map)))
+          .whereNotNull()
+          .toList();
+    } catch (_) {
+      // ignore corrupt queue
+    }
+  }
+
+  Future<void> _persistQueuedSaves() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        'saved_queue_v1',
+        jsonEncode(_queuedSaves.map((e) => e.toJson()).toList()),
+      );
+    } catch (_) {}
+  }
+
+  void _queueSave(String id, bool save) {
+    _queuedSaves.removeWhere((q) => q.id == id);
+    _queuedSaves.add(_QueuedSave(id: id, save: save));
+    _persistQueuedSaves();
+  }
+
+  Future<void> _flushSaveQueue() async {
+    if (!_isOnline || _queuedSaves.isEmpty) return;
+    final queue = List<_QueuedSave>.from(_queuedSaves);
+    for (final item in queue) {
+      try {
+        if (item.save) {
+          await ApiClient.I
+              .post(ApiEndpoints.savedUniversities, data: {'university_id': item.id});
+          savedIds.add(item.id);
+        } else {
+          await ApiClient.I.delete('${ApiEndpoints.savedUniversities}/${item.id}');
+          savedIds.remove(item.id);
+        }
+        _queuedSaves.remove(item);
+      } catch (_) {
+        // keep in queue if failed
+      }
+    }
+    await _persistQueuedSaves();
+    if (mounted) setState(() {});
   }
 
   Future<void> _loadCached() async {
@@ -100,6 +182,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<Response<dynamic>> _getWithTimeout(String path) async {
+    if (!_isOnline) {
+      return Response(
+        requestOptions: RequestOptions(path: path),
+        statusCode: 504,
+        data: {'message': 'offline'},
+      );
+    }
     return ApiClient.I
         .get(path)
         .timeout(
@@ -125,14 +214,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final uniRes = results[0];
       // Fail fast to offline data if server unreachable
       if ((uniRes.statusCode ?? 0) == 504) {
-        await _loadFromCsvFallback();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Using offline data (server unreachable)')),
-          );
-          setState(() => loading = false);
-        }
-        return;
+      await _loadFromCsvFallback();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Using offline data (server unreachable)')),
+        );
+        setState(() => loading = false);
+      }
+      return;
       }
       final courseRes = results[1];
       final savedRes = results[2];
@@ -216,7 +305,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     copy['courses'] = _coursesOf(uni);
     copy['country'] ??= uni['countryName'];
     copy['id'] ??= uni['_id'] ?? uni['sourceId'] ?? uni['source_id'];
+    copy['id'] ??= _offlineIdFor(uni);
     return copy;
+  }
+
+  String _offlineIdFor(Map<String, dynamic> uni) {
+    final name = (uni['name'] ?? '').toString();
+    final country = (uni['country'] ?? '').toString();
+    final slug = '${name.toLowerCase()}|${country.toLowerCase()}'
+        .replaceAll(RegExp(r'[^a-z0-9|]+'), '-')
+        .replaceAll('--', '-');
+    return 'csv-$slug';
   }
 
   List<String> _coursesOf(Map<String, dynamic> uni) {
@@ -297,16 +396,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _toggleSave(Map<String, dynamic> university) async {
     final id = university['id']?.toString();
-    if (id == null || id.startsWith('csv-')) {
-      // Offline CSV entries cannot be saved to server.
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Offline entries cannot be saved.')),
-      );
-      return;
-    }
+    if (id == null) return;
 
     final isCurrentlySaved = savedIds.contains(id);
     try {
+      // Local-only path for offline CSV rows
+      if (id.startsWith('csv-')) {
+        setState(() {
+          if (isCurrentlySaved) {
+            savedIds.remove(id);
+          } else {
+            savedIds.add(id);
+          }
+        });
+        await _saveCache();
+        return;
+      }
+
+      if (!_isOnline) {
+        _queueSave(id, !isCurrentlySaved);
+        setState(() {
+          if (isCurrentlySaved) {
+            savedIds.remove(id);
+          } else {
+            savedIds.add(id);
+          }
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Offline: will sync saved items when online.')),
+        );
+        return;
+      }
+
       if (isCurrentlySaved) {
         // Remove from saved
         await ApiClient.I.delete('${ApiEndpoints.savedUniversities}/$id');
@@ -317,6 +438,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         setState(() => savedIds.add(id));
       }
     } catch (e) {
+      // Queue for retry if online call fails
+      if (!id.startsWith('csv-')) {
+        _queueSave(id, !isCurrentlySaved);
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to ${isCurrentlySaved ? 'unsave' : 'save'} university: $e')),
@@ -641,6 +766,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void dispose() {
     _accelSub?.cancel();
+    _connSub?.cancel();
     super.dispose();
   }
 
@@ -708,6 +834,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Simple shuffle to surface new cards after sensor-triggered refreshes.
     universities.shuffle(_random);
     setState(() {});
+  }
+}
+
+class _QueuedSave {
+  final String id;
+  final bool save;
+
+  _QueuedSave({required this.id, required this.save});
+
+  Map<String, dynamic> toJson() => {'id': id, 'save': save};
+
+  static _QueuedSave? fromJson(Map<String, dynamic> json) {
+    final id = json['id']?.toString();
+    final save = json['save'];
+    if (id == null || save == null) return null;
+    return _QueuedSave(id: id, save: save == true || save == 'true');
   }
 }
 
