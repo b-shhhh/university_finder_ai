@@ -54,6 +54,7 @@ class _ChatbotPanelState extends State<_ChatbotPanel> {
   final _inputCtrl = TextEditingController();
   final List<_Message> _messages = <_Message>[];
   bool _loading = false;
+  static const _apiTimeout = Duration(seconds: 4);
   bool get _online => widget.isOnline;
 
   @override
@@ -99,7 +100,9 @@ class _ChatbotPanelState extends State<_ChatbotPanel> {
       return;
     }
     try {
-      final res = await ApiClient.I.post('/chatbot', data: {'message': query});
+      final res = await ApiClient.I
+          .post('/chatbot', data: {'message': query})
+          .timeout(_apiTimeout);
       final data = res.data;
       final reply =
           data is Map ? (data['reply'] ?? data['message'] ?? data.toString()) : data.toString();
@@ -144,7 +147,9 @@ class _ChatbotPanelState extends State<_ChatbotPanel> {
     final id = (uni['id'] ?? uni['_id'] ?? uni['sourceId'])?.toString();
     if (id != null && id.isNotEmpty) {
       try {
-        final res = await ApiClient.I.get("${ApiEndpoints.universities}/$id");
+        final res = await ApiClient.I
+            .get("${ApiEndpoints.universities}/$id")
+            .timeout(_apiTimeout);
         final data = res.data is Map ? (res.data['data'] ?? res.data) : res.data;
         if (data is Map) {
           detail = Map<String, dynamic>.from(data);
@@ -189,14 +194,14 @@ class _ChatbotPanelState extends State<_ChatbotPanel> {
               borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Row(
-              children: const [
-                Icon(Icons.school, color: Colors.white),
-                SizedBox(width: 10),
+              children: [
+                const Icon(Icons.school, color: Colors.white),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'UniGuide Assistant',
                         style: TextStyle(
                           color: Colors.white,
@@ -204,10 +209,32 @@ class _ChatbotPanelState extends State<_ChatbotPanel> {
                           fontSize: 16,
                         ),
                       ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Ask about universities, courses, IELTS/SAT',
-                        style: TextStyle(color: Color(0xFFE0E7FF), fontSize: 12),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Ask about universities, courses, IELTS/SAT',
+                              style: TextStyle(color: Color(0xFFE0E7FF), fontSize: 12),
+                            ),
+                          ),
+                          if (!_online)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE0E7FF).withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Text(
+                                'Offline',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ],
                   ),
