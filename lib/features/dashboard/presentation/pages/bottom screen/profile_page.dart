@@ -470,6 +470,9 @@ class _ProfilePageState extends State<ProfilePage> {
         );
       },
     );
+    oldCtrl.dispose();
+    newCtrl.dispose();
+    confirmCtrl.dispose();
   }
 
   Future<void> _queueProfileUpdate(Map<String, dynamic> payload) async {
