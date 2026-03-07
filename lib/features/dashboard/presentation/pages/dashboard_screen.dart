@@ -782,11 +782,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     showDashboardChatbot(context, universities, isOnline: _isOnline);
   }
 
-  void _onNavTap(int index) {
+  Future<void> _onNavTap(int index) async {
+    if (index == 0) {
+      if (_navIndex != 0) {
+        setState(() => _navIndex = 0);
+      }
+      return;
+    }
+
     setState(() => _navIndex = index);
-    if (index == 0) return;
+
     if (index == 1) {
-      Navigator.of(context).push(
+      await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => SavedPage(
             savedIds: savedIds.toList(),
@@ -796,10 +803,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       );
     } else if (index == 2) {
-      Navigator.of(context).push(
+      await Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => const ProfilePage()),
       );
     }
+
+    if (!mounted) return;
+    setState(() => _navIndex = 0);
   }
 
   @override
