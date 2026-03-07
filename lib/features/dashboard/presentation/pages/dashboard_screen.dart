@@ -438,6 +438,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Offline: will sync saved items when online.')),
         );
+        await _saveCache();
         return;
       }
 
@@ -450,6 +451,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         await ApiClient.I.post(ApiEndpoints.savedUniversities, data: {'university_id': id});
         setState(() => savedIds.add(id));
       }
+      await _saveCache();
     } catch (e) {
       // Queue for retry if online call fails
       if (!id.startsWith('csv-')) {
