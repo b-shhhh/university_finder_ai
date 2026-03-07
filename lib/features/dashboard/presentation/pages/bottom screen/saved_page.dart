@@ -121,7 +121,7 @@ class _SavedPageState extends State<SavedPage> {
     try {
       await ApiClient.I.delete("${ApiEndpoints.savedUniversities}/$id");
       savedIds.remove(id);
-      universities.removeWhere((u) => (u['id'] ?? u['_id']).toString() == id);
+      universities.removeWhere((u) => _resolveId(u) == id);
       widget.onSavedChanged?.call(savedIds);
       setState(() {});
     } catch (e) {
