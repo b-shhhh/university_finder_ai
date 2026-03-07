@@ -48,11 +48,11 @@ class _SavedPageState extends State<SavedPage> {
     try {
       // Prefer provided IDs if present; otherwise fetch from API.
       if (widget.savedIds != null) {
-        savedIds = widget.savedIds!;
+        savedIds = List<String>.from(widget.savedIds!.toSet());
       } else {
         final savedRes = await ApiClient.I.get(ApiEndpoints.savedUniversities);
         final ids = (savedRes.data is Map ? savedRes.data['data'] : savedRes.data) as List;
-        savedIds = ids.map((e) => e.toString()).toList();
+        savedIds = ids.map((e) => e.toString()).toSet().toList();
       }
 
       universities = [];
