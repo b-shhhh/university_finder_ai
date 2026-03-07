@@ -84,14 +84,7 @@ class _ChatbotPanelState extends State<_ChatbotPanel> {
     _inputCtrl.clear();
     await _respond(text);
     setState(() => _loading = false);
-    await Future.delayed(const Duration(milliseconds: 50));
-    if (widget.scrollController.hasClients) {
-      widget.scrollController.animateTo(
-        widget.scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-      );
-    }
+    await _scrollToBottom();
   }
 
   Future<void> _respond(String query) async {
@@ -120,6 +113,7 @@ class _ChatbotPanelState extends State<_ChatbotPanel> {
       _answerOffline(query);
     }
     setState(() {});
+    await _scrollToBottom();
   }
 
   void _answerOffline(String query) {
@@ -140,6 +134,16 @@ class _ChatbotPanelState extends State<_ChatbotPanel> {
       universities: matches,
     ));
     setState(() {});
+  }
+
+  Future<void> _scrollToBottom() async {
+    await Future.delayed(const Duration(milliseconds: 50));
+    if (!widget.scrollController.hasClients) return;
+    await widget.scrollController.animateTo(
+      widget.scrollController.position.maxScrollExtent,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+    );
   }
 
   Future<void> _openUniversity(Map<String, dynamic> uni) async {
