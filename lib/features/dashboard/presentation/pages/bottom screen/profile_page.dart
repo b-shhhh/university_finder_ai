@@ -154,6 +154,7 @@ class _ProfilePageState extends State<ProfilePage> {
       final res = await ApiClient.I.put(ApiEndpoints.updateProfile, data: form);
       final updated = res.data is Map ? (res.data['data'] ?? res.data) : res.data;
       setState(() => user = Map<String, dynamic>.from(updated));
+      await _cacheProfile(user);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile updated')),
