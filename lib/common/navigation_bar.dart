@@ -4,7 +4,7 @@ import '../features/dashboard/presentation/pages/bottom screen/profile_page.dart
 
 class MyNavigationBar extends StatelessWidget {
   final int currentIndex;
-  final Function(int)? onTap;
+  final ValueChanged<int>? onTap;
   final List<String>? savedIds;
   final List<Map<String, dynamic>>? allUniversities;
   final void Function(List<String> ids)? onSavedChanged;
@@ -23,6 +23,7 @@ class MyNavigationBar extends StatelessWidget {
     return BottomNavigationBar(
       currentIndex: currentIndex,
       onTap: (i) {
+        if (i == currentIndex) return;
         if (onTap != null) {
           onTap!(i);
           return;
