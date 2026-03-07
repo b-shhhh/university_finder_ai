@@ -91,7 +91,13 @@ class _SavedPageState extends State<SavedPage> {
           }
         }),
       );
-      universities.addAll(fetched.whereType<Map<String, dynamic>>());
+      for (final university in fetched.whereType<Map<String, dynamic>>()) {
+        final resolvedId = _resolveId(university);
+        final alreadyAdded = universities.any((u) => _resolveId(u) == resolvedId);
+        if (!alreadyAdded) {
+          universities.add(university);
+        }
+      }
 
       widget.onSavedChanged?.call(savedIds);
     } catch (e) {
