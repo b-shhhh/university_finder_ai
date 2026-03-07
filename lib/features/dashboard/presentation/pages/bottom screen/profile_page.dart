@@ -54,6 +54,7 @@ class _ProfilePageState extends State<ProfilePage> {
       _flushQueuedProfile();
       _loadProfile();
     }
+    if (!mounted) return;
     setState(() => _online = nowOnline);
   }
 
