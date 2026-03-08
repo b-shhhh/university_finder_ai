@@ -26,7 +26,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
   final phoneController = TextEditingController();
-  final countryCodeController = TextEditingController(text: "+1");
 
   @override
   void dispose() {
@@ -35,7 +34,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     passwordController.dispose();
     confirmPasswordController.dispose();
     phoneController.dispose();
-    countryCodeController.dispose();
     super.dispose();
   }
 
@@ -100,19 +98,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const SizedBox(height: 14),
                     _passwordInput("Confirm password", confirmPasswordController, isConfirm: true),
                     const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 1,
-                          child: _input("Country code", countryCodeController, keyboard: TextInputType.phone),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          flex: 3,
-                          child: _input("Phone number", phoneController, keyboard: TextInputType.phone),
-                        ),
-                      ],
-                    ),
+                    _input("Phone number", phoneController, keyboard: TextInputType.phone),
                     const SizedBox(height: 18),
                     SizedBox(
                       width: double.infinity,
@@ -252,8 +238,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         id: emailController.text.trim(),
         fullName: fullNameController.text.trim(),
         email: emailController.text.trim(),
-        phone: '${countryCodeController.text.trim()} ${phoneController.text.trim()}'.trim(),
-        country: countryCodeController.text.trim(),
+        phone: phoneController.text.trim(),
+        country: null,
         password: passwordController.text.trim(),
       ),
     );

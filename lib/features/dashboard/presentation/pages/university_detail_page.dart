@@ -341,15 +341,23 @@ class UniversityDetailPage extends StatelessWidget {
         uni['web_pages'] ??
         uni['webPages'];
 
-    if (raw is List && raw.isNotEmpty) return raw.first.toString().trim();
-    if (raw is String) return raw.trim();
+    if (raw is List && raw.isNotEmpty) return _normalizeWebsite(raw.first.toString());
+    if (raw is String) return _normalizeWebsite(raw);
     return null;
   }
 
   Future<void> _launchUrl(String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri != null && await canLaunchUrl(uri)) {
+    final normalized = _normalizeWebsite(url);
+    final uri = Uri.tryParse(normalized);
+    if (uri != null) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
+  }
+
+  String _normalizeWebsite(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return trimmed;
+    final hasScheme = RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*://').hasMatch(trimmed);
+    return hasScheme ? trimmed : 'https://$trimmed';
   }
 }

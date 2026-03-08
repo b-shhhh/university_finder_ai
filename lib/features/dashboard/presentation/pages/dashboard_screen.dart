@@ -773,7 +773,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                           duration: const Duration(milliseconds: 300),
                                           child: _UniversitiesGrid(
                                             key: ValueKey(filteredUniversities.length),
-                                            universities: filteredUniversities,
+                                            universities: filteredUniversities.take(6).toList(),
                                             isOnline: _isOnline,
                                             onUniversityTap: (university) => Navigator.push(
                                               context,

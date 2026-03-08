@@ -24,7 +24,7 @@ class UniversityCard extends StatelessWidget {
     final name = university['name']?.toString().trim() ?? '';
     final country = university['country']?.toString().trim() ?? '';
     final logo = university['logo_url'];
-    final website = university['website_url']?.toString().trim();
+    final website = _websiteOf(university);
 
     // 🚫 Do not render invalid universities
     if (name.isEmpty ||
@@ -204,19 +204,36 @@ class UniversityCard extends StatelessWidget {
 
   /// Opens website externally
   Future<void> _launchUrl(String url) async {
-    final uri = Uri.tryParse(url);
+    final uri = Uri.tryParse(_normalizeWebsite(url));
 
     if (uri == null) return;
 
     try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(
-          uri,
-          mode: LaunchMode.externalApplication,
-        );
-      }
+      await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
     } catch (_) {
       // silently ignore
     }
+  }
+
+  String? _websiteOf(Map<String, dynamic> uni) {
+    final raw = uni['website_url'] ??
+        uni['website'] ??
+        uni['websiteUrl'] ??
+        uni['web_pages'] ??
+        uni['webPages'];
+
+    if (raw is List && raw.isNotEmpty) return _normalizeWebsite(raw.first.toString());
+    if (raw is String) return _normalizeWebsite(raw);
+    return null;
+  }
+
+  String _normalizeWebsite(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return trimmed;
+    final hasScheme = RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*://').hasMatch(trimmed);
+    return hasScheme ? trimmed : 'https://$trimmed';
   }
 }

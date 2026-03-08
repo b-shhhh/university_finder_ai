@@ -96,14 +96,21 @@ class ApiClient {
     }
 
     if (!kIsWeb && Platform.isAndroid) {
-      // Prefer emulator loopback first to avoid LAN timeouts.
-      addIfMissing('http://10.0.2.2:5050/api');
-      // If override provided, keep it next.
+      // Prefer the explicitly configured host first. On physical devices,
+      // emulator loopback is invalid and should only be a last resort.
       if (override.isNotEmpty) addIfMissing(override);
-      // Last, the base URL.
       addIfMissing(base);
-      if (base.contains('localhost') || base.contains('127.0.0.1')) {
-        addIfMissing(base.replaceFirst(RegExp(r'localhost|127\\.0\\.0\\.1'), '10.0.2.2'));
+      addIfMissing('http://10.0.2.2:5050/api');
+      if ((override.isNotEmpty &&
+              (override.contains('localhost') || override.contains('127.0.0.1'))) ||
+          base.contains('localhost') ||
+          base.contains('127.0.0.1')) {
+        addIfMissing(
+          (override.isNotEmpty ? override : base).replaceFirst(
+            RegExp(r'localhost|127\\.0\\.0\\.1'),
+            '10.0.2.2',
+          ),
+        );
       }
     } else {
       if (override.isNotEmpty) addIfMissing(override);
