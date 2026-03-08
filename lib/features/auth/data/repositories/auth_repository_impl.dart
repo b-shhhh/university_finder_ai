@@ -35,14 +35,17 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<AuthResponse> registerUser(AuthEntity user) async {
-    final payload = {
+    final payload = <String, dynamic>{
       'fullName': user.fullName,
       'email': user.email,
-      'countryCode': user.country ?? '',
       'phone': user.phone,
       'password': user.password ?? '',
       'confirmPassword': user.password ?? '',
     };
+    final countryCode = user.country?.trim();
+    if (countryCode != null && countryCode.isNotEmpty) {
+      payload['countryCode'] = countryCode;
+    }
     final online = await _isOnline();
     if (!online) {
       await _local.registerUser(_toHive(user));
