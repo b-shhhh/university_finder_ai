@@ -136,7 +136,7 @@ class UniversityCard extends StatelessWidget {
     final imageSize = radius * 1.65;
     final iconSize = radius * 0.85;
     if (!isOnline) {
-      return _initialsAvatar(radius: radius);
+      return _placeholderAvatar(radius: radius);
     }
 
     if (logo != null && logo.toString().trim().isNotEmpty) {
@@ -187,7 +187,7 @@ class UniversityCard extends StatelessWidget {
     }
 
     // Fallback icon
-    return _initialsAvatar(radius: radius);
+    return _placeholderAvatar(radius: radius);
   }
 
   String? _asPng(String url) {
@@ -200,22 +200,14 @@ class UniversityCard extends StatelessWidget {
     return null;
   }
 
-  Widget _initialsAvatar({double radius = 24}) {
-    final name = (university['name'] ?? '').toString().trim();
-    final initials = name.isNotEmpty
-        ? name
-            .split(RegExp(r'\s+'))
-            .where((p) => p.isNotEmpty)
-            .take(2)
-            .map((p) => p[0].toUpperCase())
-            .join()
-        : 'U';
+  Widget _placeholderAvatar({double radius = 24}) {
     return CircleAvatar(
       radius: radius,
       backgroundColor: const Color(0xFFE2E8F0),
-      child: Text(
-        initials,
-        style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.black87),
+      child: Icon(
+        Icons.school,
+        size: radius * 0.85,
+        color: Colors.black87,
       ),
     );
   }
