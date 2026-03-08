@@ -1,3 +1,4 @@
+import 'dart:convert';
 import '../../domain/entities/auth_entity.dart';
 import '../../domain/entities/auth_response.dart';
 import '../../domain/repositories/auth_repository.dart';
@@ -8,6 +9,7 @@ import '../models/auth_hive_model.dart';
 import '../../../../core/api/api_client.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl({
@@ -20,6 +22,8 @@ class AuthRepositoryImpl implements AuthRepository {
   final AuthLocalDataSource _local;
   final ApiClient _client = ApiClient.I;
   final Connectivity _connectivity = Connectivity();
+  static const _profileCacheKey = 'profile_cache_v1';
+  static const _sessionCacheKey = 'auth_session_user_v1';
 
   Future<bool> _isOnline() async {
     final result = await _connectivity.checkConnectivity();
@@ -43,7 +47,9 @@ class AuthRepositoryImpl implements AuthRepository {
     if (!online) {
       await _local.registerUser(_toHive(user));
       await _client.saveToken('local-${user.email}');
-      return AuthResponse.success(_offlineEntity(user), message: "Registered locally (offline)");
+      final offlineUser = _offlineEntity(user);
+      await _cacheUserState(offlineUser);
+      return AuthResponse.success(offlineUser, message: "Registered locally (offline)");
     }
     try {
       final AuthApiModel res = await _remote.registerUser(payload);
@@ -51,12 +57,16 @@ class AuthRepositoryImpl implements AuthRepository {
       await _local.registerUser(
         _toHive(_withPassword(user, (user.password ?? payload['password'] ?? '').toString())),
       );
-      return AuthResponse.success(res.toEntity(), message: "Registered successfully");
+      final registeredUser = res.toEntity();
+      await _cacheUserState(registeredUser);
+      return AuthResponse.success(registeredUser, message: "Registered successfully");
     } on DioException catch (e) {
       if (_isConnectionIssue(e)) {
         await _local.registerUser(_toHive(user));
         await _client.saveToken('local-${user.email}');
-        return AuthResponse.success(_offlineEntity(user), message: "Registered locally (offline)");
+        final offlineUser = _offlineEntity(user);
+        await _cacheUserState(offlineUser);
+        return AuthResponse.success(offlineUser, message: "Registered locally (offline)");
       }
       rethrow;
     }
@@ -71,7 +81,9 @@ class AuthRepositoryImpl implements AuthRepository {
         return AuthResponse.failure("Offline login failed: user not found");
       }
       await _client.saveToken('local-$email');
-      return AuthResponse.success(_fromHive(local), message: "Logged in (offline)");
+      final offlineUser = _fromHive(local);
+      await _cacheUserState(offlineUser);
+      return AuthResponse.success(offlineUser, message: "Logged in (offline)");
     }
     try {
       final AuthApiModel res = await _remote.loginUser(email, password);
@@ -79,6 +91,7 @@ class AuthRepositoryImpl implements AuthRepository {
       // Persist for offline login using provided password
       final apiUser = res.toEntity();
       await _local.registerUser(_toHive(_withPassword(apiUser, password)));
+      await _cacheUserState(apiUser);
       return AuthResponse.success(apiUser, message: "Logged in");
     } on DioException catch (e) {
       // Treat connection/timeout as offline and fallback quietly
@@ -86,7 +99,9 @@ class AuthRepositoryImpl implements AuthRepository {
         final local = await _local.loginUser(email, password);
         if (local != null) {
           await _client.saveToken('local-$email');
-          return AuthResponse.success(_fromHive(local), message: "Logged in (offline cache)");
+          final offlineUser = _fromHive(local);
+          await _cacheUserState(offlineUser);
+          return AuthResponse.success(offlineUser, message: "Logged in (offline cache)");
         }
         return AuthResponse.failure("Offline login failed: user not found");
       }
@@ -96,7 +111,9 @@ class AuthRepositoryImpl implements AuthRepository {
       final local = await _local.loginUser(email, password);
       if (local != null) {
         await _client.saveToken('local-$email');
-        return AuthResponse.success(_fromHive(local), message: "Logged in (offline cache)");
+        final offlineUser = _fromHive(local);
+        await _cacheUserState(offlineUser);
+        return AuthResponse.success(offlineUser, message: "Logged in (offline cache)");
       }
       rethrow;
     }
@@ -155,5 +172,22 @@ class AuthRepositoryImpl implements AuthRepository {
         e.type == DioExceptionType.receiveTimeout ||
         e.type == DioExceptionType.sendTimeout ||
         e.type == DioExceptionType.unknown;
+  }
+
+  Future<void> _cacheUserState(AuthEntity user) async {
+    final prefs = await SharedPreferences.getInstance();
+    final profile = <String, dynamic>{
+      'id': user.id,
+      'fullName': user.fullName,
+      'email': user.email,
+      'phone': user.phone,
+      'country': user.country ?? '',
+      'bio': user.bio ?? '',
+      'profilePic': user.profilePic,
+      'role': user.role,
+      'savedUniversities': user.savedUniversities,
+    };
+    await prefs.setString(_profileCacheKey, jsonEncode(profile));
+    await prefs.setString(_sessionCacheKey, jsonEncode(profile));
   }
 }

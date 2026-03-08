@@ -1,36 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../../core/api/api_client.dart';
-import '../../../../core/api/api_endpoints.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../data/repositories/auth_repository_impl.dart';
+import '../../domain/entities/auth_entity.dart';
 import '../widgets/animated_cap.dart';
-
-Future<bool> register({
-  required String fullName,
-  required String email,
-  required String password,
-  required String phone,
-  String countryCode = '+1',
-}) async {
-  try {
-    final res = await ApiClient.I.post(
-      ApiEndpoints.register,
-      data: {
-        "fullName": fullName,
-        "email": email,
-        "password": password,
-        "confirmPassword": password,
-        "phone": phone,
-        "countryCode": countryCode,
-      },
-    );
-    final token = (res.data as Map<String, dynamic>)['token']?.toString();
-    if (token != null) await ApiClient.I.saveToken(token);
-    return (res.statusCode ?? 400) >= 200 && (res.statusCode ?? 0) < 300;
-  } catch (e) {
-    debugPrint("Register error: $e");
-    return false;
-  }
-}
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -44,6 +16,7 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _authRepository = AuthRepositoryImpl();
   bool showPassword = false;
   bool showConfirmPassword = false;
   bool loading = false;
@@ -54,6 +27,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final confirmPasswordController = TextEditingController();
   final phoneController = TextEditingController();
   final countryCodeController = TextEditingController(text: "+1");
+
+  @override
+  void dispose() {
+    fullNameController.dispose();
+    emailController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    phoneController.dispose();
+    countryCodeController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -263,22 +247,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => loading = true);
 
-    final ok = await register(
-      fullName: fullNameController.text.trim(),
-      email: emailController.text.trim(),
-      password: passwordController.text.trim(),
-      phone: phoneController.text.trim(),
-      countryCode: countryCodeController.text.trim(),
+    final response = await _authRepository.registerUser(
+      AuthEntity(
+        id: emailController.text.trim(),
+        fullName: fullNameController.text.trim(),
+        email: emailController.text.trim(),
+        phone: '${countryCodeController.text.trim()} ${phoneController.text.trim()}'.trim(),
+        country: countryCodeController.text.trim(),
+        password: passwordController.text.trim(),
+      ),
     );
 
     setState(() => loading = false);
     if (!mounted) return;
 
-    if (ok) {
+    if (response.success) {
       Navigator.pushReplacementNamed(context, '/dashboard');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Signup failed. Please try again.")),
+        SnackBar(content: Text(response.message)),
       );
     }
   }

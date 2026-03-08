@@ -1,26 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../../core/api/api_client.dart';
-import '../../../../core/api/api_endpoints.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../data/repositories/auth_repository_impl.dart';
 import '../widgets/animated_cap.dart';
-
-Future<Map<String, dynamic>> login(String email, String password) async {
-  try {
-    final res = await ApiClient.I.post(
-      ApiEndpoints.login,
-      data: {"email": email, "password": password},
-    );
-    final data = res.data as Map<String, dynamic>;
-    if ((res.statusCode ?? 400) == 200 && data['success'] == true) {
-      final token = data['token']?.toString();
-      if (token != null) await ApiClient.I.saveToken(token);
-      return {"success": true, "token": token, "user": data['data']?['user']};
-    }
-    return {"success": false, "error": data['message'] ?? "Login failed"};
-  } catch (e) {
-    return {"success": false, "error": "Server error"};
-  }
-}
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -33,10 +14,18 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _authRepository = AuthRepositoryImpl();
   bool showPassword = false;
   bool loading = false;
   final _email = TextEditingController();
   final _password = TextEditingController();
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -219,14 +208,17 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => loading = true);
-    final res = await login(_email.text.trim(), _password.text.trim());
+    final res = await _authRepository.loginUser(
+      _email.text.trim(),
+      _password.text.trim(),
+    );
     setState(() => loading = false);
     if (!mounted) return;
-    if (res['success'] == true) {
+    if (res.success) {
       Navigator.pushReplacementNamed(context, '/dashboard');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res['error'].toString())),
+        SnackBar(content: Text(res.message)),
       );
     }
   }

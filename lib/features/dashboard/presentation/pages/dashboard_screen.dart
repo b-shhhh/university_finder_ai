@@ -649,6 +649,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                 name: c.key,
                                                 universityCount: c.value,
                                                 flagUrl: _flagForCountry(universities, c.key),
+                                                isOnline: _isOnline,
                                                 onTap: () => _showUniversitiesForCountry(c.key),
                                               ),
                                             )

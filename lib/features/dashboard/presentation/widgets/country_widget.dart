@@ -4,6 +4,7 @@ class CountryCard extends StatelessWidget {
   final String name;
   final int universityCount;
   final String? flagUrl;
+  final bool isOnline;
   final VoidCallback? onTap;
 
   const CountryCard({
@@ -11,6 +12,7 @@ class CountryCard extends StatelessWidget {
     required this.name,
     required this.universityCount,
     this.flagUrl,
+    this.isOnline = true,
     this.onTap,
   });
 
@@ -38,7 +40,7 @@ class CountryCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              displayFlag != null
+              displayFlag != null && isOnline
                   ? CircleAvatar(
                       backgroundImage: NetworkImage(
                         displayFlag,

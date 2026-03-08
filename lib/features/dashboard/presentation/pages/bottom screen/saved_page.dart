@@ -152,8 +152,12 @@ class _SavedPageState extends State<SavedPage> {
                     margin: const EdgeInsets.symmetric(vertical: 8),
                     child: ListTile(
                       leading: u['logo_url'] != null && (u['logo_url'] as String).isNotEmpty
-                          ? CircleAvatar(backgroundImage: NetworkImage(u['logo_url']))
-                          : const CircleAvatar(child: Icon(Icons.school)),
+                          ? CircleAvatar(
+                              backgroundImage: NetworkImage(u['logo_url']),
+                              onBackgroundImageError: (_, __) {},
+                              child: Text(_initialsFor(u)),
+                            )
+                          : CircleAvatar(child: Text(_initialsFor(u))),
                       title: Text(u['name'] ?? ''),
                       subtitle: Text(u['country'] ?? ''),
                       trailing: IconButton(
@@ -187,4 +191,15 @@ class _SavedPageState extends State<SavedPage> {
 
   String? _resolveId(Map<String, dynamic> uni) =>
       uni['id']?.toString() ?? uni['_id']?.toString() ?? uni['sourceId']?.toString();
+
+  String _initialsFor(Map<String, dynamic> uni) {
+    final name = (uni['name'] ?? '').toString().trim();
+    if (name.isEmpty) return 'U';
+    return name
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .take(2)
+        .map((part) => part[0].toUpperCase())
+        .join();
+  }
 }
