@@ -738,15 +738,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             .toList(),
                                       ),
                                       const SizedBox(height: 16),
-                                      AnimatedSwitcher(
-                                        duration: const Duration(milliseconds: 300),
-                                        child: _UniversitiesGrid(
-                                          key: ValueKey(filteredUniversities.length),
-                                          // Show a concise sample (max 6) to keep the dashboard tight
-                                          universities: filteredUniversities.take(6).toList(),
-                                          isOnline: _isOnline,
-                                          onUniversityTap: (university) => Navigator.push(
-                                            context,
+                                        AnimatedSwitcher(
+                                          duration: const Duration(milliseconds: 300),
+                                          child: _UniversitiesGrid(
+                                            key: ValueKey(filteredUniversities.length),
+                                            universities: filteredUniversities,
+                                            isOnline: _isOnline,
+                                            onUniversityTap: (university) => Navigator.push(
+                                              context,
                                             MaterialPageRoute(
                                               builder: (_) => UniversityDetailPage(
                                                 university: university,
