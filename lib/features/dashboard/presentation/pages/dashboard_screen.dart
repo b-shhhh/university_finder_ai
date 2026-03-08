@@ -57,11 +57,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _initConnectivity();
-    _loadQueuedSaves();
-    _loadCached();
-    _load(background: true);
+    _bootstrap();
     _accelSub = accelerometerEvents.listen(_checkShake);
+  }
+
+  Future<void> _bootstrap() async {
+    await _initConnectivity();
+    await _loadQueuedSaves();
+    await _loadCached();
+    await _load(background: true);
   }
 
   Future<void> _initConnectivity() async {
@@ -165,6 +169,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  bool get _hasLocalDashboardData =>
+      universities.isNotEmpty || courses.isNotEmpty || countries.isNotEmpty;
+
   Future<void> _saveCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -205,12 +212,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final shouldToggleLoading = !background || loading;
     if (!background && mounted) setState(() => loading = true);
 
-    // Fast path for offline mode: use cached/CSV immediately with clear messaging.
+    // Prefer last cached online data; only fall back to bundled CSV if nothing local exists.
     if (!_isOnline) {
-      await _loadFromCsvFallback();
+      if (!_hasLocalDashboardData) {
+        await _loadFromCsvFallback();
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Offline: showing cached / bundled data')),
+          SnackBar(
+            content: Text(
+              _hasLocalDashboardData
+                  ? 'Offline: showing cached data'
+                  : 'Offline: showing bundled data',
+            ),
+          ),
         );
         if (shouldToggleLoading) setState(() => loading = false);
       }
@@ -225,16 +240,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ]);
 
       final uniRes = results[0];
-      // Fail fast to offline data if server unreachable
+      // Fail fast to local data if server unreachable.
       if ((uniRes.statusCode ?? 0) == 504) {
-      await _loadFromCsvFallback();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Using offline data (server unreachable)')),
-        );
-        setState(() => loading = false);
-      }
-      return;
+        if (!_hasLocalDashboardData) {
+          await _loadFromCsvFallback();
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                _hasLocalDashboardData
+                    ? 'Using cached data (server unreachable)'
+                    : 'Using bundled data (server unreachable)',
+              ),
+            ),
+          );
+          setState(() => loading = false);
+        }
+        return;
       }
       final courseRes = results[1];
       final savedRes = results[2];
@@ -290,10 +313,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
         await _saveCache();
       }
     } catch (e) {
-      await _loadFromCsvFallback();
+      if (!_hasLocalDashboardData) {
+        await _loadFromCsvFallback();
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Using offline data: $e')),
+          SnackBar(
+            content: Text(
+              _hasLocalDashboardData
+                  ? 'Using cached data'
+                  : 'Using bundled data: $e',
+            ),
+          ),
         );
       }
     } finally {
