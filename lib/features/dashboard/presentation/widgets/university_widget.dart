@@ -52,6 +52,7 @@ class UniversityCard extends StatelessWidget {
             ],
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               _buildAvatar(logo),
               const SizedBox(width: 12),
@@ -59,11 +60,12 @@ class UniversityCard extends StatelessWidget {
               /// University name + country
               Expanded(
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       name,
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
@@ -88,20 +90,26 @@ class UniversityCard extends StatelessWidget {
                 children: [
                   if (website != null && website.isNotEmpty)
                     IconButton(
+                      constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
                       icon: const Icon(
                         Icons.language,
                         color: Colors.blue,
-                        size: 20,
+                        size: 18,
                       ),
                       onPressed: () => _launchUrl(website),
                       tooltip: 'Visit website',
                     ),
                   IconButton(
+                    constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                    padding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
                     icon: Icon(
                       isSaved
                           ? Icons.favorite
                           : Icons.favorite_border,
-                      size: 20,
+                      size: 18,
                     ),
                     color: isSaved ? Colors.red : Colors.grey,
                     onPressed: onSave,
