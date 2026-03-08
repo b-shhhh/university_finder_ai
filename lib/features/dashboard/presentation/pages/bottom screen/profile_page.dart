@@ -33,6 +33,7 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _online = true;
   static const _profileCacheKey = 'profile_cache_v1';
   static const _profileQueueKey = 'profile_update_queue_v1';
+  bool get _hasCachedProfile => user.isNotEmpty;
 
   @override
   void initState() {
@@ -113,9 +114,17 @@ class _ProfilePageState extends State<ProfilePage> {
       });
       await _cacheProfile(user);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load profile: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _hasCachedProfile
+                  ? 'Using cached profile'
+                  : 'Failed to load profile: $e',
+            ),
+          ),
+        );
+      }
     } finally {
       setState(() => _loading = false);
     }
@@ -402,30 +411,32 @@ class _ProfilePageState extends State<ProfilePage> {
         return StatefulBuilder(
           builder: (context, setState) => AlertDialog(
             title: const Text('Change password'),
-            content: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: oldCtrl,
-                    obscureText: true,
-                    decoration: const InputDecoration(labelText: 'Current password'),
-                    validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-                  ),
-                  TextFormField(
-                    controller: newCtrl,
-                    obscureText: true,
-                    decoration: const InputDecoration(labelText: 'New password'),
-                    validator: (v) => v != null && v.length >= 6 ? null : 'Min 6 chars',
-                  ),
-                  TextFormField(
-                    controller: confirmCtrl,
-                    obscureText: true,
-                    decoration: const InputDecoration(labelText: 'Confirm new password'),
-                    validator: (v) => v == newCtrl.text ? null : 'Passwords do not match',
-                  ),
-                ],
+            content: SingleChildScrollView(
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: oldCtrl,
+                      obscureText: true,
+                      decoration: const InputDecoration(labelText: 'Current password'),
+                      validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                    ),
+                    TextFormField(
+                      controller: newCtrl,
+                      obscureText: true,
+                      decoration: const InputDecoration(labelText: 'New password'),
+                      validator: (v) => v != null && v.length >= 6 ? null : 'Min 6 chars',
+                    ),
+                    TextFormField(
+                      controller: confirmCtrl,
+                      obscureText: true,
+                      decoration: const InputDecoration(labelText: 'Confirm new password'),
+                      validator: (v) => v == newCtrl.text ? null : 'Passwords do not match',
+                    ),
+                  ],
+                ),
               ),
             ),
             actions: [
@@ -470,9 +481,6 @@ class _ProfilePageState extends State<ProfilePage> {
         );
       },
     );
-    oldCtrl.dispose();
-    newCtrl.dispose();
-    confirmCtrl.dispose();
   }
 
   Future<void> _queueProfileUpdate(Map<String, dynamic> payload) async {
@@ -500,6 +508,13 @@ class _ProfilePageState extends State<ProfilePage> {
   String? _resolveAvatarUrl(String? raw) {
     if (raw == null || raw.isEmpty) return null;
     final lower = raw.toLowerCase();
+    final origin = ApiEndpoints.baseUrl.replaceFirst(RegExp(r'/api/?$'), '');
+    if (lower.startsWith('http://localhost') || lower.startsWith('https://localhost')) {
+      return raw.replaceFirst(RegExp(r'https?://localhost(?::\d+)?'), origin);
+    }
+    if (lower.startsWith('http://127.0.0.1') || lower.startsWith('https://127.0.0.1')) {
+      return raw.replaceFirst(RegExp(r'https?://127\.0\.0\.1(?::\d+)?'), origin);
+    }
     if (lower.startsWith('http')) return raw;
 
     // Extract filename
@@ -507,7 +522,6 @@ class _ProfilePageState extends State<ProfilePage> {
         ? raw.split(RegExp(r'uploads[\\/]+')).last
         : raw.split(RegExp(r'[\\\\/]')).last;
 
-    final origin = ApiEndpoints.baseUrl.replaceFirst(RegExp(r'/api/?$'), '');
     return '$origin/uploads/$afterUploads';
   }
 }

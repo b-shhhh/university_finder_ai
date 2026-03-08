@@ -40,14 +40,15 @@ class ApiClient {
     dio.interceptors.add(
       InterceptorsWrapper(onRequest: (options, handler) async {
         final token = await _tokenStorage.read(key: _tokenKey);
-        if (token != null && token.isNotEmpty) {
+        if (token != null && token.isNotEmpty && !_isLocalOfflineToken(token)) {
           options.headers['Authorization'] = 'Bearer $token';
         }
         options.headers['Accept'] = 'application/json';
         return handler.next(options);
       }, onError: (error, handler) async {
         // Auto-clear token on 401 to prevent stale sessions
-        if (error.response?.statusCode == 401) {
+        final authHeader = error.requestOptions.headers['Authorization']?.toString() ?? '';
+        if (error.response?.statusCode == 401 && authHeader.startsWith('Bearer ')) {
           await clearToken();
         }
         return handler.next(error);
@@ -96,11 +97,11 @@ class ApiClient {
     }
 
     if (!kIsWeb && Platform.isAndroid) {
-      // Prefer the explicitly configured host first. On physical devices,
-      // emulator loopback is invalid and should only be a last resort.
+      // Prefer only the explicitly configured host. Map localhost-style
+      // hosts to emulator loopback when needed, but do not silently inject
+      // 10.0.2.2 for every Android run.
       if (override.isNotEmpty) addIfMissing(override);
       addIfMissing(base);
-      addIfMissing('http://10.0.2.2:5050/api');
       if ((override.isNotEmpty &&
               (override.contains('localhost') || override.contains('127.0.0.1'))) ||
           base.contains('localhost') ||
@@ -170,4 +171,6 @@ class ApiClient {
   Future<void> saveToken(String token) => _tokenStorage.write(key: _tokenKey, value: token);
 
   Future<void> clearToken() => _tokenStorage.delete(key: _tokenKey);
+
+  bool _isLocalOfflineToken(String token) => token.startsWith('local-');
 }

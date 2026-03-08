@@ -8,7 +8,9 @@ import '../pages/university_detail_page.dart';
 void showDashboardChatbot(
   BuildContext context,
   List<Map<String, dynamic>> universities, // kept for potential future use
-  {bool isOnline = true}
+  {bool isOnline = true,
+  Set<String> savedIds = const <String>{},
+  Future<void> Function(Map<String, dynamic>)? onSaveToggle}
 ) {
   showModalBottomSheet(
     context: context,
@@ -28,6 +30,8 @@ void showDashboardChatbot(
             scrollController: controller,
             universities: universities,
             isOnline: isOnline,
+            savedIds: savedIds,
+            onSaveToggle: onSaveToggle,
           ),
         ),
       ),
@@ -40,11 +44,15 @@ class _ChatbotPanel extends StatefulWidget {
     required this.scrollController,
     required this.universities,
     required this.isOnline,
+    required this.savedIds,
+    required this.onSaveToggle,
   });
 
   final ScrollController scrollController;
   final List<Map<String, dynamic>> universities;
   final bool isOnline;
+  final Set<String> savedIds;
+  final Future<void> Function(Map<String, dynamic>)? onSaveToggle;
 
   @override
   State<_ChatbotPanel> createState() => _ChatbotPanelState();
@@ -168,8 +176,8 @@ class _ChatbotPanelState extends State<_ChatbotPanel> {
       MaterialPageRoute(
         builder: (_) => UniversityDetailPage(
           university: detail,
-          isSaved: false,
-          onSaveToggle: null,
+          isSaved: widget.savedIds.contains((detail['id'] ?? detail['_id'] ?? detail['sourceId'])?.toString()),
+          onSaveToggle: widget.onSaveToggle == null ? null : () => widget.onSaveToggle!(detail),
         ),
       ),
     );
@@ -296,6 +304,12 @@ class _ChatbotPanelState extends State<_ChatbotPanel> {
                                   (u) => _UniCard(
                                     university: u,
                                     onTap: () => _openUniversity(u),
+                                    isSaved: widget.savedIds.contains(
+                                      (u['id'] ?? u['_id'] ?? u['sourceId'])?.toString(),
+                                    ),
+                                    onSave: widget.onSaveToggle == null
+                                        ? null
+                                        : () => widget.onSaveToggle!(u),
                                   ),
                                 )
                                 .toList(),
@@ -366,10 +380,17 @@ class _Message {
 }
 
 class _UniCard extends StatelessWidget {
-  const _UniCard({required this.university, required this.onTap});
+  const _UniCard({
+    required this.university,
+    required this.onTap,
+    this.isSaved = false,
+    this.onSave,
+  });
 
   final Map<String, dynamic> university;
   final VoidCallback onTap;
+  final bool isSaved;
+  final VoidCallback? onSave;
 
   @override
   Widget build(BuildContext context) {
@@ -420,6 +441,18 @@ class _UniCard extends StatelessWidget {
                 Text(
                   'IELTS $ielts | SAT $sat',
                   style: const TextStyle(color: Colors.black54, fontSize: 12),
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: IconButton(
+                    visualDensity: VisualDensity.compact,
+                    onPressed: onSave,
+                    icon: Icon(
+                      isSaved ? Icons.favorite : Icons.favorite_border,
+                      color: isSaved ? Colors.redAccent : Colors.grey,
+                    ),
+                  ),
                 ),
               ],
             ),

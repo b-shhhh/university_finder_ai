@@ -128,7 +128,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       try {
         if (item.save) {
           await ApiClient.I
-              .post(ApiEndpoints.savedUniversities, data: {'university_id': item.id});
+              .post(ApiEndpoints.savedUniversities, data: {'universityId': item.id});
           savedIds.add(item.id);
         } else {
           await ApiClient.I.delete('${ApiEndpoints.savedUniversities}/${item.id}');
@@ -479,7 +479,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         setState(() => savedIds.remove(id));
       } else {
         // Add to saved
-        await ApiClient.I.post(ApiEndpoints.savedUniversities, data: {'university_id': id});
+        await ApiClient.I.post(ApiEndpoints.savedUniversities, data: {'universityId': id});
         setState(() => savedIds.add(id));
       }
       await _saveCache();
@@ -537,7 +537,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         leading: const Icon(Icons.school),
                         title: Text(uni['name'] ?? 'Unknown University'),
                         subtitle: Text(uni['city'] ?? ''),
-                        trailing: const Icon(Icons.chevron_right),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
+                              onPressed: () => _toggleSave(uni),
+                              icon: Icon(
+                                savedIds.contains(uni['id']?.toString())
+                                    ? Icons.favorite
+                                    : Icons.favorite_border,
+                                color: savedIds.contains(uni['id']?.toString())
+                                    ? Colors.redAccent
+                                    : Colors.grey,
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right),
+                          ],
+                        ),
                         onTap: () {
                           Navigator.pop(context);
                           Navigator.push(
@@ -739,7 +756,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                                           leading: const Icon(Icons.school),
                                                                           title: Text(uni['name'] ?? 'Unknown University'),
                                                                           subtitle: Text(uni['city'] ?? ''),
-                                                                          trailing: const Icon(Icons.chevron_right),
+                                                                          trailing: Row(
+                                                                            mainAxisSize: MainAxisSize.min,
+                                                                            children: [
+                                                                              IconButton(
+                                                                                visualDensity: VisualDensity.compact,
+                                                                                onPressed: () => _toggleSave(uni),
+                                                                                icon: Icon(
+                                                                                  savedIds.contains(uni['id']?.toString())
+                                                                                      ? Icons.favorite
+                                                                                      : Icons.favorite_border,
+                                                                                  color: savedIds.contains(uni['id']?.toString())
+                                                                                      ? Colors.redAccent
+                                                                                      : Colors.grey,
+                                                                                ),
+                                                                              ),
+                                                                              const Icon(Icons.chevron_right),
+                                                                            ],
+                                                                          ),
                                                                           onTap: () {
                                                                             Navigator.pop(context);
                                                                             Navigator.push(
@@ -812,7 +846,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _openChatbotSheet() {
-    showDashboardChatbot(context, universities, isOnline: _isOnline);
+    showDashboardChatbot(
+      context,
+      universities,
+      isOnline: _isOnline,
+      savedIds: savedIds,
+      onSaveToggle: _toggleSave,
+    );
   }
 
   Future<void> _onNavTap(int index) async {
@@ -1095,23 +1135,34 @@ class _UniversitiesGrid extends StatelessWidget {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.5,
-          ),
-          itemCount: universities.length,
-          itemBuilder: (_, i) => UniversityCard(
-            university: universities[i],
-            onTap: () => onUniversityTap(universities[i]),
-            onSave: () => onSave(universities[i]),
-            isSaved: savedIds.contains(universities[i]['id']?.toString()),
-            isOnline: isOnline,
-          ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            final crossAxisCount = width >= 1100
+                ? 4
+                : width >= 760
+                    ? 3
+                    : 2;
+            final childAspectRatio = width >= 760 ? 1.15 : 1.0;
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: childAspectRatio,
+              ),
+              itemCount: universities.length,
+              itemBuilder: (_, i) => UniversityCard(
+                university: universities[i],
+                onTap: () => onUniversityTap(universities[i]),
+                onSave: () => onSave(universities[i]),
+                isSaved: savedIds.contains(universities[i]['id']?.toString()),
+                isOnline: isOnline,
+              ),
+            );
+          },
         ),
       ],
     );

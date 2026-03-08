@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class UniversityDetailPage extends StatelessWidget {
+class UniversityDetailPage extends StatefulWidget {
   final Map<String, dynamic> university;
   final bool isSaved;
   final VoidCallback? onSaveToggle;
@@ -15,7 +15,21 @@ class UniversityDetailPage extends StatelessWidget {
   });
 
   @override
+  State<UniversityDetailPage> createState() => _UniversityDetailPageState();
+}
+
+class _UniversityDetailPageState extends State<UniversityDetailPage> {
+  late bool _isSaved;
+
+  @override
+  void initState() {
+    super.initState();
+    _isSaved = widget.isSaved;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final university = widget.university;
     final logo = university['logo_url'];
     final name = university['name'] ?? 'Unknown University';
     final country = university['country'] ?? '';
@@ -30,10 +44,15 @@ class UniversityDetailPage extends StatelessWidget {
         actions: [
           IconButton(
             icon: Icon(
-              isSaved ? Icons.favorite : Icons.favorite_border,
-              color: isSaved ? Colors.red : Colors.grey,
+              _isSaved ? Icons.favorite : Icons.favorite_border,
+              color: _isSaved ? Colors.red : Colors.grey,
             ),
-            onPressed: onSaveToggle,
+            onPressed: widget.onSaveToggle == null
+                ? null
+                : () {
+                    widget.onSaveToggle?.call();
+                    setState(() => _isSaved = !_isSaved);
+                  },
           ),
         ],
       ),

@@ -37,96 +37,106 @@ class UniversityCard extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 6,
-                offset: Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              _buildAvatar(logo),
-              const SizedBox(width: 12),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isTabletCard = constraints.maxWidth >= 220;
+            final padding = isTabletCard ? 16.0 : 12.0;
+            final avatarRadius = isTabletCard ? 28.0 : 24.0;
+            final iconSize = isTabletCard ? 18.0 : 16.0;
+            final actionBox = isTabletCard ? 32.0 : 28.0;
+            final titleSize = isTabletCard ? 15.0 : 14.0;
+            final subtitleSize = isTabletCard ? 13.0 : 12.0;
 
-              /// University name + country
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      country,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.black54,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              /// Action buttons
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (website != null && website.isNotEmpty)
-                    IconButton(
-                      constraints: const BoxConstraints.tightFor(width: 32, height: 32),
-                      padding: EdgeInsets.zero,
-                      visualDensity: VisualDensity.compact,
-                      icon: const Icon(
-                        Icons.language,
-                        color: Colors.blue,
-                        size: 18,
-                      ),
-                      onPressed: () => _launchUrl(website),
-                      tooltip: 'Visit website',
-                    ),
-                  IconButton(
-                    constraints: const BoxConstraints.tightFor(width: 32, height: 32),
-                    padding: EdgeInsets.zero,
-                    visualDensity: VisualDensity.compact,
-                    icon: Icon(
-                      isSaved
-                          ? Icons.favorite
-                          : Icons.favorite_border,
-                      size: 18,
-                    ),
-                    color: isSaved ? Colors.red : Colors.grey,
-                    onPressed: onSave,
+            return Container(
+              padding: EdgeInsets.all(padding),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 6,
+                    offset: Offset(0, 3),
                   ),
                 ],
               ),
-            ],
-          ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      _buildAvatar(logo, radius: avatarRadius),
+                      const Spacer(),
+                      if (website != null && website.isNotEmpty)
+                        IconButton(
+                          constraints: BoxConstraints.tightFor(width: actionBox, height: actionBox),
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                          icon: Icon(
+                            Icons.language,
+                            color: Colors.blue,
+                            size: iconSize,
+                          ),
+                          onPressed: () => _launchUrl(website),
+                          tooltip: 'Visit website',
+                        ),
+                      IconButton(
+                        constraints: BoxConstraints.tightFor(width: actionBox, height: actionBox),
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                        icon: Icon(
+                          isSaved ? Icons.favorite : Icons.favorite_border,
+                          size: iconSize,
+                        ),
+                        color: isSaved ? Colors.red : Colors.grey,
+                        onPressed: onSave,
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: isTabletCard ? 12 : 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          name,
+                          maxLines: isTabletCard ? 3 : 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: titleSize,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          country,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: subtitleSize,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
   }
 
   /// Builds university logo avatar
-  Widget _buildAvatar(Object? logo) {
+  Widget _buildAvatar(Object? logo, {double radius = 24}) {
+    final imageSize = radius * 1.65;
+    final iconSize = radius * 0.85;
     if (!isOnline) {
-      return _initialsAvatar();
+      return _initialsAvatar(radius: radius);
     }
 
     if (logo != null && logo.toString().trim().isNotEmpty) {
@@ -136,20 +146,20 @@ class UniversityCard extends StatelessWidget {
       // SVG logo
       if (url.toLowerCase().endsWith('.svg')) {
         return CircleAvatar(
-          radius: 24,
+          radius: radius,
           backgroundColor: const Color(0xFFE2E8F0),
           child: pngUrl != null
               ? Image.network(
                   pngUrl,
-                  width: 40,
-                  height: 40,
+                  width: imageSize,
+                  height: imageSize,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const Icon(Icons.school, size: 20),
+                  errorBuilder: (_, __, ___) => Icon(Icons.school, size: iconSize),
                 )
               : SvgPicture.network(
                   url,
-                  width: 28,
-                  height: 28,
+                  width: imageSize * 0.7,
+                  height: imageSize * 0.7,
                   placeholderBuilder: (context) =>
                       const CircularProgressIndicator(strokeWidth: 2),
                 ),
@@ -158,18 +168,18 @@ class UniversityCard extends StatelessWidget {
 
       // Normal image logo
       return CircleAvatar(
-        radius: 24,
+        radius: radius,
         backgroundColor: const Color(0xFFE2E8F0),
         child: ClipOval(
           child: Image.network(
             url,
-            width: 40,
-            height: 40,
+            width: imageSize,
+            height: imageSize,
             fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => const SizedBox(
-              width: 40,
-              height: 40,
-              child: Icon(Icons.school, size: 20),
+            errorBuilder: (context, error, stackTrace) => SizedBox(
+              width: imageSize,
+              height: imageSize,
+              child: Icon(Icons.school, size: iconSize),
             ),
           ),
         ),
@@ -177,7 +187,7 @@ class UniversityCard extends StatelessWidget {
     }
 
     // Fallback icon
-    return _initialsAvatar();
+    return _initialsAvatar(radius: radius);
   }
 
   String? _asPng(String url) {
@@ -190,7 +200,7 @@ class UniversityCard extends StatelessWidget {
     return null;
   }
 
-  Widget _initialsAvatar() {
+  Widget _initialsAvatar({double radius = 24}) {
     final name = (university['name'] ?? '').toString().trim();
     final initials = name.isNotEmpty
         ? name
@@ -201,7 +211,7 @@ class UniversityCard extends StatelessWidget {
             .join()
         : 'U';
     return CircleAvatar(
-      radius: 24,
+      radius: radius,
       backgroundColor: const Color(0xFFE2E8F0),
       child: Text(
         initials,
